@@ -1,242 +1,200 @@
-export type EmploymentType = "full-time" | "part-time" | "contract" | "intern";
-export type EmploymentStatus = "active" | "inactive" | "on-leave" | "terminated";
-export type SalaryType = "monthly" | "hourly" | "annual";
+import {
+  employeeApi,
+  type EmployeeDashboardData,
+  type CurrentTimesheet,
+  type Paystub,
+  type PaystubDetail,
+  type LeaveBalance,
+  type LeaveRequest,
+  type CreateLeaveRequestData,
+} from '@/lib/api/employee';
+import { usersApi, type User, type UserFilters } from '@/lib/api/users';
 
-export interface Employee {
-  id: string;
-  name: string;
-  email: string;
-  department: string;
-  role: string;
-  employmentType: EmploymentType;
-  status: EmploymentStatus;
-  joinDate: string;
-  salaryType: SalaryType;
-  contractStart?: string;
-  contractEnd?: string;
-}
-
-export interface EmployeeFilter {
-  search?: string;
-  department?: string;
-  role?: string;
-  employmentType?: EmploymentType;
-  status?: EmploymentStatus;
-}
-
-export interface EmployeeSort {
-  field: keyof Employee;
-  direction: "asc" | "desc";
-}
-
-const mockEmployees: Employee[] = [
-  {
-    id: "emp001",
-    name: "Alice Johnson",
-    email: "alice.johnson@company.com",
-    department: "Engineering",
-    role: "Senior Developer",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2022-01-15",
-    salaryType: "monthly",
-    contractStart: "2022-01-15",
-  },
-  {
-    id: "emp002",
-    name: "Bob Williams",
-    email: "bob.williams@company.com",
-    department: "Marketing",
-    role: "Marketing Manager",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2021-06-20",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp003",
-    name: "Charlie Brown",
-    email: "charlie.brown@company.com",
-    department: "Sales",
-    role: "Sales Representative",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2023-03-10",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp004",
-    name: "Diana Prince",
-    email: "diana.prince@company.com",
-    department: "HR",
-    role: "HR Specialist",
-    employmentType: "full-time",
-    status: "on-leave",
-    joinDate: "2020-11-05",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp005",
-    name: "Eve Adams",
-    email: "eve.adams@company.com",
-    department: "Engineering",
-    role: "Junior Developer",
-    employmentType: "part-time",
-    status: "active",
-    joinDate: "2023-08-22",
-    salaryType: "hourly",
-  },
-  {
-    id: "emp006",
-    name: "Frank White",
-    email: "frank.white@company.com",
-    department: "Finance",
-    role: "Accountant",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2021-09-12",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp007",
-    name: "Grace Lee",
-    email: "grace.lee@company.com",
-    department: "HR",
-    role: "HR Manager",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2019-04-18",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp008",
-    name: "Henry King",
-    email: "henry.king@company.com",
-    department: "Sales",
-    role: "Sales Manager",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2020-02-28",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp009",
-    name: "Ivy Green",
-    email: "ivy.green@company.com",
-    department: "Marketing",
-    role: "Content Writer",
-    employmentType: "contract",
-    status: "active",
-    joinDate: "2023-11-01",
-    salaryType: "hourly",
-    contractStart: "2023-11-01",
-    contractEnd: "2024-11-01",
-  },
-  {
-    id: "emp010",
-    name: "Jack Black",
-    email: "jack.black@company.com",
-    department: "Engineering",
-    role: "Tech Lead",
-    employmentType: "full-time",
-    status: "active",
-    joinDate: "2018-07-15",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp011",
-    name: "Karen White",
-    email: "karen.white@company.com",
-    department: "Finance",
-    role: "Financial Analyst",
-    employmentType: "full-time",
-    status: "inactive",
-    joinDate: "2022-05-10",
-    salaryType: "monthly",
-  },
-  {
-    id: "emp012",
-    name: "Liam Brown",
-    email: "liam.brown@company.com",
-    department: "HR",
-    role: "Recruiter",
-    employmentType: "intern",
-    status: "active",
-    joinDate: "2024-01-08",
-    salaryType: "hourly",
-  },
-];
+const mapId = (obj: any): any => {
+  if (!obj) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(mapId);
+  }
+  if (typeof obj === 'object') {
+    const mapped = { ...obj };
+    if (mapped._id && !mapped.id) {
+      mapped.id = mapped._id;
+    }
+    return mapped;
+  }
+  return obj;
+};
 
 export const employeeService = {
+  async getDashboard(): Promise<EmployeeDashboardData> {
+    const response = await employeeApi.getDashboard();
+    if (response.success && response.data) {
+      const data = response.data;
+      return {
+        ...data,
+        latestPaystub: data.latestPaystub ? mapId(data.latestPaystub) : null,
+        leaveOverview: {
+          ...data.leaveOverview,
+          upcomingLeaves: data.leaveOverview.upcomingLeaves.map(mapId),
+        },
+      };
+    }
+    throw new Error(response.message || 'Failed to load dashboard');
+  },
+
+  async getCurrentTimesheet(): Promise<CurrentTimesheet> {
+    const response = await employeeApi.getCurrentTimesheet();
+    if (response.success && response.data) {
+      const data = response.data;
+      return {
+        ...data,
+        period: data.period ? mapId(data.period) : null,
+        timesheets: data.timesheets.map(mapId),
+      };
+    }
+    throw new Error(response.message || 'Failed to load timesheet');
+  },
+
+  async submitTimesheet(timesheetIds: string[]): Promise<void> {
+    const response = await employeeApi.submitTimesheet(timesheetIds);
+    if (!response.success) {
+      throw new Error(response.message || 'Failed to submit timesheet');
+    }
+  },
+
+  async getPaystubs(page = 1, limit = 10): Promise<{ paystubs: Paystub[]; pagination: any }> {
+    const response = await employeeApi.getPaystubs(page, limit);
+    if (response.success && response.data) {
+      return {
+        paystubs: response.data.map(mapId),
+        pagination: response.pagination,
+      };
+    }
+    return { paystubs: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+  },
+
+  async getPaystubById(id: string): Promise<PaystubDetail> {
+    const response = await employeeApi.getPaystubById(id);
+    if (response.success && response.data?.paystub) {
+      return mapId(response.data.paystub);
+    }
+    throw new Error(response.message || 'Failed to load paystub');
+  },
+
+  async getLeaveBalance(): Promise<LeaveBalance> {
+    const response = await employeeApi.getLeaveBalance();
+    if (response.success && response.data) {
+      return response.data;
+    }
+    throw new Error(response.message || 'Failed to load leave balance');
+  },
+
+  async getLeaveRequests(page = 1, limit = 10): Promise<{ leaveRequests: LeaveRequest[]; pagination: any }> {
+    const response = await employeeApi.getLeaveRequests(page, limit);
+    if (response.success && response.data) {
+      return {
+        leaveRequests: response.data.map(mapId),
+        pagination: response.pagination,
+      };
+    }
+    return { leaveRequests: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+  },
+
+  async createLeaveRequest(data: CreateLeaveRequestData): Promise<LeaveRequest> {
+    const response = await employeeApi.createLeaveRequest(data);
+    if (response.success && response.data?.leaveRequest) {
+      return mapId(response.data.leaveRequest);
+    }
+    throw new Error(response.message || 'Failed to create leave request');
+  },
+
+  async getDepartments(): Promise<string[]> {
+    try {
+      const response = await usersApi.getUniqueDepartments();
+      if (response.success && response.data?.departments) {
+        return response.data.departments;
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to load departments:', error);
+      return [];
+    }
+  },
+
+  async getRoles(): Promise<string[]> {
+    try {
+      const response = await usersApi.getUniqueRoles();
+      if (response.success && response.data?.roles) {
+        return response.data.roles;
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to load roles:', error);
+      return [];
+    }
+  },
+
   async getEmployees(
-    filters: EmployeeFilter,
-    sort: EmployeeSort,
-    pagination: { page: number; pageSize: number }
+    filters: EmployeeFilter = {},
+    sort: EmployeeSort = { field: 'name', direction: 'asc' },
+    pagination: { page: number; pageSize: number } = { page: 1, pageSize: 10 }
   ): Promise<{ items: Employee[]; total: number }> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      const userFilters: UserFilters = {
+        page: pagination.page,
+        limit: pagination.pageSize,
+        sort: String(sort.field),
+        order: sort.direction,
+        ...filters,
+      };
 
-    let filtered = [...mockEmployees];
-
-    if (filters.search) {
-      const search = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (e) =>
-          e.name.toLowerCase().includes(search) ||
-          e.email.toLowerCase().includes(search) ||
-          e.department.toLowerCase().includes(search) ||
-          e.role.toLowerCase().includes(search)
-      );
-    }
-
-    if (filters.department) {
-      filtered = filtered.filter((e) => e.department === filters.department);
-    }
-
-    if (filters.role) {
-      filtered = filtered.filter((e) => e.role === filters.role);
-    }
-
-    if (filters.employmentType) {
-      filtered = filtered.filter((e) => e.employmentType === filters.employmentType);
-    }
-
-    if (filters.status) {
-      filtered = filtered.filter((e) => e.status === filters.status);
-    }
-
-    filtered.sort((a, b) => {
-      const aVal = a[sort.field];
-      const bVal = b[sort.field];
-      if (aVal === undefined || bVal === undefined) return 0;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        return sort.direction === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      const response = await usersApi.getUsers(userFilters);
+      if (response.success && response.data) {
+        return {
+          items: response.data.map(mapId) as Employee[],
+          total: response.pagination?.total || 0,
+        };
       }
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-      }
-      if (aVal < bVal) return sort.direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return sort.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    const total = filtered.length;
-    const start = (pagination.page - 1) * pagination.pageSize;
-    const end = start + pagination.pageSize;
-
-    return { items: filtered.slice(start, end), total };
+      return { items: [], total: 0 };
+    } catch (error) {
+      console.error('Failed to load employees:', error);
+      throw error;
+    }
   },
 
   async getEmployee(id: string): Promise<Employee | null> {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return mockEmployees.find((e) => e.id === id) || null;
-  },
-
-  getDepartments(): string[] {
-    return Array.from(new Set(mockEmployees.map((e) => e.department))).sort();
-  },
-
-  getRoles(): string[] {
-    return Array.from(new Set(mockEmployees.map((e) => e.role))).sort();
+    try {
+      const response = await usersApi.getUserById(id);
+      if (response.success && response.data?.user) {
+        return mapId(response.data.user) as Employee;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load employee:', error);
+      throw error;
+    }
   },
 };
 
+// Export types for admin employee management
+export type Employee = User;
+export type EmployeeFilter = {
+  search?: string;
+  department?: string;
+  role?: string;
+  status?: string;
+  employmentType?: string;
+};
+export type EmployeeSort = {
+  field: keyof Employee;
+  direction: 'asc' | 'desc';
+};
+
+export type {
+  EmployeeDashboardData,
+  CurrentTimesheet,
+  Paystub,
+  PaystubDetail,
+  LeaveBalance,
+  LeaveRequest,
+};

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { DepartmentCost } from "@/lib/services/reportsService";
+import { DepartmentCost } from "@/lib/api/reports";
 
 interface DepartmentCostCardProps {
   data: DepartmentCost[];
@@ -120,4 +120,6 @@ export default function DepartmentCostCard({ data, onExport }: DepartmentCostCar
     </Card>
   );
 }
+
+
 

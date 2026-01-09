@@ -20,18 +20,6 @@ export default function RolesPermissions() {
       ],
     },
     {
-      id: ROLES.HR,
-      name: "HR Manager",
-      description: "Human resources and employee management",
-      permissions: [
-        "Manage employee records",
-        "View payroll information",
-        "Manage leave requests",
-        "Time tracking oversight",
-        "Generate HR reports",
-      ],
-    },
-    {
       id: ROLES.MANAGER,
       name: "Manager",
       description: "Team management and approvals",
@@ -114,4 +102,6 @@ export default function RolesPermissions() {
     </div>
   );
 }
+
+
 

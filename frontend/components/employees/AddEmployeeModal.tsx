@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -38,6 +38,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    photo: "",
     department: "",
     role: "",
     employmentType: "full-time" as EmploymentType,
@@ -49,9 +50,13 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
 
-  const departments = employeeService.getDepartments();
-  const roles = employeeService.getRoles();
+  useEffect(() => {
+    employeeService.getDepartments().then(setDepartments);
+    employeeService.getRoles().then(setRoles);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -64,6 +69,7 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
       const newEmployee: Omit<Employee, "id"> = {
         name: formData.name,
         email: formData.email,
+        photo: formData.photo || undefined,
         department: formData.department,
         role: formData.role,
         employmentType: formData.employmentType,
@@ -74,12 +80,12 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
         contractEnd: formData.contractEnd || undefined,
       };
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log("Employee added:", newEmployee);
+      await employeeService.addEmployee(newEmployee);
       
       setFormData({
         name: "",
         email: "",
+        photo: "",
         department: "",
         role: "",
         employmentType: "full-time",
@@ -147,6 +153,21 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-[#0F172A]">
+                Photo URL (Optional)
+              </label>
+              <Input
+                type="url"
+                value={formData.photo}
+                onChange={(e) => setFormData({ ...formData, photo: e.target.value })}
+                placeholder="https://example.com/photo.jpg"
+              />
+              <p className="text-xs text-[#64748B]">
+                Enter a URL for the employee photo. If not provided, initials will be used.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -302,4 +323,5 @@ export default function AddEmployeeModal({ isOpen, onClose, onSuccess }: AddEmpl
     </div>
   );
 }
+
 

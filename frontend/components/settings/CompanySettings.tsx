@@ -1,11 +1,13 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
 import type { CompanySettings } from "@/lib/services/settingsService";
 import { settingsService } from "@/lib/services/settingsService";
+import type { Timezone } from "@/lib/api/settings";
 
 interface CompanySettingsProps {
   settings: CompanySettings;
@@ -13,7 +15,22 @@ interface CompanySettingsProps {
 }
 
 export default function CompanySettings({ settings, onChange }: CompanySettingsProps) {
-  const timezones = settingsService.getTimezones();
+  const [timezones, setTimezones] = useState<Timezone[]>([]);
+  const [loadingTimezones, setLoadingTimezones] = useState(true);
+
+  useEffect(() => {
+    const loadTimezones = async () => {
+      try {
+        const tzList = await settingsService.getTimezones();
+        setTimezones(tzList);
+      } catch (error) {
+        console.error('Failed to load timezones:', error);
+      } finally {
+        setLoadingTimezones(false);
+      }
+    };
+    loadTimezones();
+  }, []);
   const workingDays = [
     { value: "monday", label: "Monday" },
     { value: "tuesday", label: "Tuesday" },
@@ -94,14 +111,19 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
               Timezone <span className="text-[#DC2626]">*</span>
             </label>
             <Select
-              value={settings.timezone}
+              value={settings.timezone || ""}
               onChange={(e) => onChange({ ...settings, timezone: e.target.value })}
+              disabled={loadingTimezones}
             >
-              {timezones.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz.replace("_", " ")}
-                </option>
-              ))}
+              {loadingTimezones ? (
+                <option value="">Loading timezones...</option>
+              ) : (
+                timezones.map((tz) => (
+                  <option key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </option>
+                ))
+              )}
             </Select>
           </div>
 
@@ -116,7 +138,7 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
                   type="button"
                   onClick={() => handleWorkingDayToggle(day.value)}
                   className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                    settings.workingDays.includes(day.value)
+                    (settings.workingDays || []).includes(day.value)
                       ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]"
                       : "border-slate-200 bg-white text-[#64748B] hover:border-slate-300"
                   }`}

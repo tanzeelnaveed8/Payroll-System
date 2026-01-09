@@ -44,14 +44,52 @@ export default function AdminSettingsPage() {
     setSuccess(null);
 
     try {
-      await settingsService.updateCompanySettings(settings.company);
-      await settingsService.updatePayrollSettings(settings.payroll);
-      await settingsService.updateAttendanceRules(settings.attendance);
-      await settingsService.updateLeavePolicies(settings.leavePolicies);
+      // Save each settings type individually
+      const savePromises = [];
+      
+      if (settings.company) {
+        savePromises.push(
+          settingsService.updateCompanySettings(settings.company).catch(err => {
+            console.error('Failed to save company settings:', err);
+            throw new Error('Company settings: ' + (err instanceof Error ? err.message : 'Failed'));
+          })
+        );
+      }
+
+      if (settings.payroll) {
+        savePromises.push(
+          settingsService.updatePayrollSettings(settings.payroll).catch(err => {
+            console.error('Failed to save payroll settings:', err);
+            throw new Error('Payroll settings: ' + (err instanceof Error ? err.message : 'Failed'));
+          })
+        );
+      }
+
+      if (settings.attendance) {
+        savePromises.push(
+          settingsService.updateAttendanceRules(settings.attendance).catch(err => {
+            console.error('Failed to save attendance settings:', err);
+            throw new Error('Attendance settings: ' + (err instanceof Error ? err.message : 'Failed'));
+          })
+        );
+      }
+
+      if (settings.leavePolicies && settings.leavePolicies.length > 0) {
+        savePromises.push(
+          settingsService.updateLeavePolicies(settings.leavePolicies).catch(err => {
+            console.error('Failed to save leave policies:', err);
+            throw new Error('Leave policies: ' + (err instanceof Error ? err.message : 'Failed'));
+          })
+        );
+      }
+
+      await Promise.all(savePromises);
       setSuccess("Settings saved successfully!");
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError("Failed to save settings. Please try again.");
+      // Reload settings to get updated data
+      await loadSettings();
+    } catch (err: any) {
+      setError(err.message || "Failed to save settings. Please try again.");
       console.error(err);
     } finally {
       setSaving(false);
@@ -150,28 +188,28 @@ export default function AdminSettingsPage() {
       <div className="mt-6">
         {activeTab === "company" && (
           <CompanySettings
-            settings={settings.company}
+            settings={settings.company || {}}
             onChange={(company) => setSettings({ ...settings, company })}
           />
         )}
 
         {activeTab === "payroll" && (
           <PayrollSettings
-            settings={settings.payroll}
+            settings={settings.payroll || {}}
             onChange={(payroll) => setSettings({ ...settings, payroll })}
           />
         )}
 
         {activeTab === "attendance" && (
           <AttendanceRules
-            rules={settings.attendance}
+            rules={settings.attendance || {}}
             onChange={(attendance) => setSettings({ ...settings, attendance })}
           />
         )}
 
         {activeTab === "leave" && (
           <LeavePolicies
-            policies={settings.leavePolicies}
+            policies={settings.leavePolicies || []}
             onChange={(leavePolicies) => setSettings({ ...settings, leavePolicies })}
           />
         )}
@@ -181,4 +219,6 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+
+
 

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { LeaveAnalytics } from "@/lib/services/reportsService";
+import { LeaveAnalytics } from "@/lib/api/reports";
 
 interface LeaveAnalyticsCardProps {
   data: LeaveAnalytics;
@@ -67,4 +67,6 @@ export default function LeaveAnalyticsCard({ data, onExport }: LeaveAnalyticsCar
     </Card>
   );
 }
+
+
 

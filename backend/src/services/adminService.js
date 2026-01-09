@@ -1,0 +1,400 @@
+import User from '../models/User.js';
+import Department from '../models/Department.js';
+import Timesheet from '../models/Timesheet.js';
+import LeaveRequest from '../models/LeaveRequest.js';
+import PayrollPeriod from '../models/PayrollPeriod.js';
+import PayStub from '../models/PayStub.js';
+import mongoose from 'mongoose';
+
+/**
+ * Get admin dashboard data
+ * Aggregates KPIs, recent payroll activity, and department breakdown
+ */
+export const getDashboardData = async () => {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Get total employees count
+  const [totalEmployees, newHiresLast30Days] = await Promise.all([
+    User.countDocuments({ 
+      role: 'employee',
+      status: { $in: ['active', 'on-leave'] }
+    }),
+    User.countDocuments({
+      role: 'employee',
+      status: { $in: ['active', 'on-leave'] },
+      joinDate: { $gte: thirtyDaysAgo }
+    })
+  ]);
+
+  // Get payroll status (current period)
+  const currentPeriod = await PayrollPeriod.findOne({
+    periodStart: { $lte: now },
+    periodEnd: { $gte: now },
+    status: { $in: ['draft', 'processing'] }
+  })
+    .sort({ periodStart: -1 })
+    .lean();
+
+  let payrollStatus = {
+    total: 0,
+    status: 'No active period',
+    nextPayday: null
+  };
+
+  if (currentPeriod) {
+    const periodPaystubs = await PayStub.aggregate([
+      {
+        $match: {
+          payrollPeriodId: new mongoose.Types.ObjectId(currentPeriod._id)
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$netPay' }
+        }
+      }
+    ]);
+
+    payrollStatus = {
+      total: periodPaystubs.length > 0 ? periodPaystubs[0].total : 0,
+      status: currentPeriod.status === 'processing' ? 'Processing' : 'Draft',
+      nextPayday: currentPeriod.payDate
+    };
+  }
+
+  // Get pending approvals
+  const [pendingTimesheets, pendingLeaveRequests, pendingPayroll] = await Promise.all([
+    Timesheet.countDocuments({ status: 'pending' }),
+    LeaveRequest.countDocuments({ status: 'pending' }),
+    PayrollPeriod.countDocuments({ status: 'processing' })
+  ]);
+
+  const totalPendingApprovals = pendingTimesheets + pendingLeaveRequests + pendingPayroll;
+
+  // Get departments count
+  const totalDepartments = await Department.countDocuments({ status: 'active' });
+
+  // Get average salary
+  const salaryData = await User.aggregate([
+    {
+      $match: {
+        role: 'employee',
+        status: { $in: ['active', 'on-leave'] },
+        salary: { $exists: true, $ne: null, $gt: 0 }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        average: { $avg: '$salary' },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const averageSalary = salaryData.length > 0 ? Math.round(salaryData[0].average) : 0;
+
+  // Get leave requests pending this month
+  const leaveRequestsThisMonth = await LeaveRequest.countDocuments({
+    status: 'pending',
+    createdAt: { $gte: currentMonthStart, $lte: currentMonthEnd }
+  });
+
+  // Get timesheet completion rate
+  const [totalTimesheets, completedTimesheets] = await Promise.all([
+    Timesheet.countDocuments({
+      date: { $gte: currentMonthStart, $lte: currentMonthEnd }
+    }),
+    Timesheet.countDocuments({
+      date: { $gte: currentMonthStart, $lte: currentMonthEnd },
+      status: { $in: ['approved', 'submitted'] }
+    })
+  ]);
+
+  const timesheetCompletionRate = totalTimesheets > 0 
+    ? Math.round((completedTimesheets / totalTimesheets) * 100) 
+    : 0;
+
+  // Get recent payroll activity (last 4 periods)
+  const recentPayrollPeriods = await PayrollPeriod.find()
+    .sort({ periodStart: -1 })
+    .limit(4)
+    .lean();
+
+  const recentPayrollActivity = await Promise.all(
+    recentPayrollPeriods.map(async (period) => {
+      const [employeeCount, totalAmount] = await Promise.all([
+        PayStub.countDocuments({ payrollPeriodId: period._id }),
+        PayStub.aggregate([
+          {
+            $match: { payrollPeriodId: new mongoose.Types.ObjectId(period._id) }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: '$netPay' }
+            }
+          }
+        ])
+      ]);
+
+      const periodName = period.periodStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const formattedDate = period.status === 'completed' 
+        ? period.processedAt 
+          ? new Date(period.processedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : period.periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'In Progress';
+
+      return {
+        id: period._id,
+        period: periodName,
+        amount: totalAmount.length > 0 ? totalAmount[0].total : 0,
+        status: period.status === 'completed' ? 'Completed' : 'Processing',
+        date: formattedDate,
+        employees: employeeCount
+      };
+    })
+  );
+
+  // Get department breakdown
+  const departments = await Department.find({ status: 'active' })
+    .select('name employeeCount activeEmployeeCount')
+    .lean();
+
+  const departmentBreakdown = await Promise.all(
+    departments.map(async (dept) => {
+      // Get employees in this department
+      const employees = await User.find({
+        department: dept.name,
+        role: 'employee',
+        status: { $in: ['active', 'on-leave'] }
+      })
+        .select('salary')
+        .lean();
+
+      const employeeCount = employees.length;
+      const annualPayroll = employees.reduce((sum, emp) => sum + (emp.salary || 0), 0);
+
+      // Color mapping for departments
+      const colors = [
+        { bg: 'bg-blue-100', bar: 'bg-blue-500' },
+        { bg: 'bg-green-100', bar: 'bg-green-500' },
+        { bg: 'bg-purple-100', bar: 'bg-purple-500' },
+        { bg: 'bg-indigo-100', bar: 'bg-indigo-500' },
+        { bg: 'bg-amber-100', bar: 'bg-amber-500' },
+        { bg: 'bg-pink-100', bar: 'bg-pink-500' }
+      ];
+      const colorIndex = departments.indexOf(dept) % colors.length;
+      const color = colors[colorIndex];
+
+      return {
+        id: dept._id,
+        name: dept.name,
+        employees: employeeCount,
+        payroll: annualPayroll,
+        bgColor: color.bg,
+        barColor: color.bar
+      };
+    })
+  );
+
+  // Find largest department
+  const largestDept = departmentBreakdown.reduce((max, dept) => 
+    dept.employees > (max?.employees || 0) ? dept : max, null
+  );
+
+  // Calculate employee growth percentage (comparing last 30 days to previous 30 days)
+  const previous30DaysStart = new Date(thirtyDaysAgo);
+  previous30DaysStart.setDate(previous30DaysStart.getDate() - 30);
+  const previous30DaysEnd = thirtyDaysAgo;
+
+  const previous30DaysHires = await User.countDocuments({
+    role: 'employee',
+    status: { $in: ['active', 'on-leave'] },
+    joinDate: { $gte: previous30DaysStart, $lt: previous30DaysEnd }
+  });
+
+  const employeeGrowth = previous30DaysHires > 0
+    ? Math.round(((newHiresLast30Days - previous30DaysHires) / previous30DaysHires) * 100)
+    : newHiresLast30Days > 0 ? 100 : 0;
+
+  // Calculate compliance metric based on multiple factors
+  const complianceFactors = {
+    timesheetCompliance: 0,
+    payrollCompliance: 0,
+    leaveCompliance: 0,
+    dataCompleteness: 0,
+    approvalCompliance: 0
+  };
+
+  // 1. Timesheet Compliance (30% weight)
+  // Check if timesheets are submitted on time (within pay period)
+  const currentPeriodStart = currentPeriod ? currentPeriod.periodStart : new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentPeriodEnd = currentPeriod ? currentPeriod.periodEnd : new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  
+  const [totalTimesheetsInPeriod, submittedTimesheetsInPeriod] = await Promise.all([
+    Timesheet.countDocuments({
+      date: { $gte: currentPeriodStart, $lte: currentPeriodEnd }
+    }),
+    Timesheet.countDocuments({
+      date: { $gte: currentPeriodStart, $lte: currentPeriodEnd },
+      status: { $in: ['submitted', 'approved'] }
+    })
+  ]);
+
+  complianceFactors.timesheetCompliance = totalTimesheetsInPeriod > 0
+    ? Math.round((submittedTimesheetsInPeriod / totalTimesheetsInPeriod) * 100)
+    : 100;
+
+  // 2. Payroll Compliance (25% weight)
+  // Check if payroll periods are processed on time
+  const last3Periods = await PayrollPeriod.find()
+    .sort({ periodEnd: -1 })
+    .limit(3)
+    .lean();
+
+  let onTimePayrolls = 0;
+  last3Periods.forEach(period => {
+    if (period.status === 'completed' && period.processedAt) {
+      // Check if processed within 3 days of period end
+      const daysToProcess = (period.processedAt - period.periodEnd) / (1000 * 60 * 60 * 24);
+      if (daysToProcess <= 3) {
+        onTimePayrolls++;
+      }
+    }
+  });
+
+  complianceFactors.payrollCompliance = last3Periods.length > 0
+    ? Math.round((onTimePayrolls / last3Periods.length) * 100)
+    : 100;
+
+  // 3. Leave Compliance (20% weight)
+  // Check if leave requests are processed within SLA (7 days)
+  const last30Days = new Date(now);
+  last30Days.setDate(now.getDate() - 30);
+  
+  const [totalLeaveRequests, processedLeaveRequests, onTimeLeaveRequests] = await Promise.all([
+    LeaveRequest.countDocuments({
+      createdAt: { $gte: last30Days }
+    }),
+    LeaveRequest.countDocuments({
+      createdAt: { $gte: last30Days },
+      status: { $in: ['approved', 'rejected'] }
+    }),
+    LeaveRequest.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: last30Days },
+          status: { $in: ['approved', 'rejected'] },
+          reviewedAt: { $exists: true }
+        }
+      },
+      {
+        $project: {
+          daysToReview: {
+            $divide: [
+              { $subtract: ['$reviewedAt', '$createdAt'] },
+              1000 * 60 * 60 * 24
+            ]
+          }
+        }
+      },
+      {
+        $match: {
+          daysToReview: { $lte: 7 }
+        }
+      },
+      {
+        $count: 'count'
+      }
+    ])
+  ]);
+
+  const onTimeLeaves = onTimeLeaveRequests.length > 0 ? onTimeLeaveRequests[0].count : 0;
+  complianceFactors.leaveCompliance = processedLeaveRequests > 0
+    ? Math.round((onTimeLeaves / processedLeaveRequests) * 100)
+    : totalLeaveRequests === 0 ? 100 : 0;
+
+  // 4. Data Completeness (15% weight)
+  // Check if employees have required fields filled
+  const [employeesWithCompleteData, totalActiveEmployees] = await Promise.all([
+    User.countDocuments({
+      role: 'employee',
+      status: { $in: ['active', 'on-leave'] },
+      email: { $exists: true, $ne: '' },
+      name: { $exists: true, $ne: '' },
+      department: { $exists: true, $ne: '' },
+      salary: { $exists: true, $gt: 0 }
+    }),
+    User.countDocuments({
+      role: 'employee',
+      status: { $in: ['active', 'on-leave'] }
+    })
+  ]);
+
+  complianceFactors.dataCompleteness = totalActiveEmployees > 0
+    ? Math.round((employeesWithCompleteData / totalActiveEmployees) * 100)
+    : 100;
+
+  // 5. Approval Compliance (10% weight)
+  // Check if pending approvals are within acceptable threshold (< 5% pending)
+  const totalApprovalItems = await Promise.all([
+    Timesheet.countDocuments({ status: 'pending' }),
+    LeaveRequest.countDocuments({ status: 'pending' }),
+    PayrollPeriod.countDocuments({ status: 'processing' })
+  ]);
+
+  const totalPending = totalApprovalItems.reduce((sum, count) => sum + count, 0);
+  const totalItems = await Promise.all([
+    Timesheet.countDocuments({}),
+    LeaveRequest.countDocuments({}),
+    PayrollPeriod.countDocuments({})
+  ]);
+  const totalAll = totalItems.reduce((sum, count) => sum + count, 0);
+
+  const pendingPercentage = totalAll > 0 ? (totalPending / totalAll) * 100 : 0;
+  // Compliance is higher when pending percentage is lower
+  complianceFactors.approvalCompliance = Math.max(0, Math.round(100 - (pendingPercentage * 2)));
+
+  // Calculate weighted compliance score
+  const complianceScore = Math.round(
+    complianceFactors.timesheetCompliance * 0.30 +
+    complianceFactors.payrollCompliance * 0.25 +
+    complianceFactors.leaveCompliance * 0.20 +
+    complianceFactors.dataCompleteness * 0.15 +
+    complianceFactors.approvalCompliance * 0.10
+  );
+
+  return {
+    kpis: {
+      totalEmployees,
+      employeeGrowth,
+      newHiresLast30Days,
+      payrollStatus: {
+        total: payrollStatus.total,
+        status: payrollStatus.status,
+        nextPayday: payrollStatus.nextPayday
+      },
+      pendingApprovals: totalPendingApprovals,
+      pendingTimesheets,
+      pendingLeaveRequests,
+      pendingPayroll,
+      totalDepartments,
+      averageSalary,
+      leaveRequestsThisMonth,
+      timesheetCompletionRate,
+      compliance: Math.min(100, Math.max(0, complianceScore)) // Ensure between 0-100
+    },
+    recentPayrollActivity,
+    departmentBreakdown: {
+      departments: departmentBreakdown,
+      largestDepartment: largestDept ? `${largestDept.name} (${largestDept.employees} employees)` : null
+    }
+  };
+};
+

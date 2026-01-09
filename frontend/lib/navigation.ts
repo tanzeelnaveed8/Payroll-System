@@ -13,16 +13,12 @@ export const navigation: Record<Role, NavItem[]> = {
   [ROLES.ADMIN]: [
     { title: "Dashboard", href: "/admin", icon: "dashboard" },
     { title: "Employees", href: "/admin/employees", icon: "users" },
+    { title: "Departments", href: "/admin/departments", icon: "business" },
+    { title: "Timesheets", href: "/admin/timesheets", icon: "clock" },
     { title: "Payroll", href: "/admin/payroll", icon: "dollar-sign" },
     { title: "Reports", href: "/admin/reports", icon: "bar-chart" },
+    { title: "Business", href: "/admin/business", icon: "business" },
     { title: "Settings", href: "/admin/settings", icon: "settings" },
-  ],
-  [ROLES.HR]: [
-    { title: "Dashboard", href: "/hr", icon: "dashboard" },
-    { title: "Employees", href: "/hr/employees", icon: "users" },
-    { title: "Time Tracking", href: "/hr/time-tracking", icon: "clock" },
-    { title: "Leave Management", href: "/hr/leave", icon: "calendar" },
-    { title: "Payroll", href: "/hr/payroll", icon: "dollar-sign" },
   ],
   [ROLES.MANAGER]: [
     { title: "Dashboard", href: "/manager", icon: "dashboard" },

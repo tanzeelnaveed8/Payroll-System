@@ -103,24 +103,44 @@ export default function EmployeeTable({
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-[#0F172A]">{employee.name}</div>
-                  <div className="text-xs text-[#64748B]">{employee.email}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
+                      {employee.photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={employee.photo}
+                          alt={employee.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <span className="text-sm font-bold text-white">
+                            {employee.name ? employee.name.charAt(0).toUpperCase() : "?"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-[#0F172A]">{employee.name || "Unknown"}</div>
+                      <div className="text-xs text-[#64748B]">{employee.email || "No email"}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0F172A]">
-                  {employee.department}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0F172A]">
-                  {employee.role}
+                  {employee.department || "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0F172A] capitalize">
-                  {employee.employmentType.replace("-", " ")}
+                  {employee.role || "N/A"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0F172A] capitalize">
+                  {employee.employmentType ? employee.employmentType.replace("-", " ") : "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-[#0F172A]">
-                  {new Date(employee.joinDate).toLocaleDateString()}
+                  {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Badge className={getStatusBadge(employee.status)}>
-                    {employee.status.replace("-", " ")}
+                  <Badge className={getStatusBadge(employee.status || "active")}>
+                    {employee.status ? employee.status.replace("-", " ") : "Active"}
                   </Badge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -143,33 +163,49 @@ export default function EmployeeTable({
         {employees.map((employee) => (
           <div key={employee.id} className="bg-white border border-slate-200 rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   className="rounded border-slate-300 text-[#2563EB]"
                   checked={selectedEmployees.includes(employee.id)}
                   onChange={(e) => onSelectEmployee(employee.id, e.target.checked)}
                 />
-                <h3 className="font-bold text-base text-[#0F172A]">{employee.name}</h3>
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
+                  {employee.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={employee.photo}
+                      alt={employee.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <span className="text-base font-bold text-white">
+                        {employee.name ? employee.name.charAt(0).toUpperCase() : "?"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <h3 className="font-bold text-base text-[#0F172A]">{employee.name || "Unknown"}</h3>
               </div>
-              <Badge className={getStatusBadge(employee.status)}>
-                {employee.status.replace("-", " ")}
+              <Badge className={getStatusBadge(employee.status || "active")}>
+                {employee.status ? employee.status.replace("-", " ") : "Active"}
               </Badge>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm text-[#64748B] mb-3">
               <div>
-                <span className="font-medium text-[#0F172A]">Department:</span> {employee.department}
+                <span className="font-medium text-[#0F172A]">Department:</span> {employee.department || "N/A"}
               </div>
               <div>
-                <span className="font-medium text-[#0F172A]">Role:</span> {employee.role}
+                <span className="font-medium text-[#0F172A]">Role:</span> {employee.role ? employee.role.charAt(0).toUpperCase() + employee.role.slice(1) : "N/A"}
               </div>
               <div>
                 <span className="font-medium text-[#0F172A]">Type:</span>{" "}
-                {employee.employmentType.replace("-", " ")}
+                {employee.employmentType ? employee.employmentType.replace("-", " ") : "N/A"}
               </div>
               <div>
                 <span className="font-medium text-[#0F172A]">Join Date:</span>{" "}
-                {new Date(employee.joinDate).toLocaleDateString()}
+                {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
               </div>
             </div>
             <Button

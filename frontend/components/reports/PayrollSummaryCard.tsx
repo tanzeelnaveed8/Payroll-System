@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { PayrollSummary } from "@/lib/services/reportsService";
+import { PayrollSummary } from "@/lib/api/reports";
 
 interface PayrollSummaryCardProps {
   data: PayrollSummary;
@@ -66,4 +66,6 @@ export default function PayrollSummaryCard({ data, onExport }: PayrollSummaryCar
     </Card>
   );
 }
+
+
 

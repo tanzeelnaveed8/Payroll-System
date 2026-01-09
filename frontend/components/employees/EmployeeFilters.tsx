@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
@@ -30,8 +30,13 @@ const statusOptions = [
 
 export default function EmployeeFilters({ filters, onFilterChange }: EmployeeFiltersProps) {
   const [localFilters, setLocalFilters] = useState(filters);
-  const departments = employeeService.getDepartments();
-  const roles = employeeService.getRoles();
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
+
+  useEffect(() => {
+    employeeService.getDepartments().then(setDepartments);
+    employeeService.getRoles().then(setRoles);
+  }, []);
 
   const handleChange = (field: keyof EmployeeFilter, value: string) => {
     setLocalFilters((prev) => ({ ...prev, [field]: value || undefined }));
@@ -128,4 +133,6 @@ export default function EmployeeFilters({ filters, onFilterChange }: EmployeeFil
     </div>
   );
 }
+
+
 

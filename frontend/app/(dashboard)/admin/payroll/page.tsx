@@ -46,8 +46,18 @@ export default function AdminPayrollPage() {
     setFilters((prev) => ({ ...prev, [field]: value || undefined }));
   };
 
-  const handleProcessPayroll = () => {
-    console.log("Process payroll triggered");
+  const handleProcessPayroll = async () => {
+    if (!currentPeriod) {
+      alert("No current period available");
+      return;
+    }
+    try {
+      await payrollService.processPayroll(currentPeriod.id);
+      alert("Payroll processed successfully");
+      window.location.reload();
+    } catch (error: any) {
+      alert(error.message || "Failed to process payroll");
+    }
   };
 
   const statusOptions = [
@@ -154,6 +164,17 @@ export default function AdminPayrollPage() {
         onClose={() => {
           setIsDrawerOpen(false);
           setSelectedPeriod(null);
+        }}
+        onRefresh={() => {
+          Promise.all([
+            payrollService.getPayrollPeriods(filters),
+            payrollService.getCurrentPeriod(),
+            payrollService.getNextPayrollDate(),
+          ]).then(([periodsData, current, nextDate]) => {
+            setPeriods(periodsData);
+            setCurrentPeriod(current);
+            setNextPayrollDate(nextDate);
+          });
         }}
       />
     </div>

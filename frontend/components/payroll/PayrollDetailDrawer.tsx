@@ -1,22 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { PayrollPeriod } from "@/lib/services/payrollService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
+import { payrollService } from "@/lib/services/payrollService";
 
 interface PayrollDetailDrawerProps {
   period: PayrollPeriod | null;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
 const getStatusBadge = (status: PayrollPeriod["status"]) => {
-  const styles = {
+  const styles: Record<PayrollPeriod["status"], string> = {
     draft: "bg-slate-100 text-slate-700 border-slate-200",
     processing: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20",
     completed: "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20",
+    cancelled: "bg-red-100 text-red-700 border-red-200",
   };
   return styles[status];
 };
@@ -25,8 +29,39 @@ export default function PayrollDetailDrawer({
   period,
   isOpen,
   onClose,
+  onRefresh,
 }: PayrollDetailDrawerProps) {
+  const [processing, setProcessing] = useState(false);
+  
   if (!isOpen || !period) return null;
+
+  const handleProcess = async () => {
+    setProcessing(true);
+    try {
+      await payrollService.processPayroll(period.id);
+      alert("Payroll processed successfully");
+      onRefresh?.();
+      onClose();
+    } catch (error: any) {
+      alert(error.message || "Failed to process payroll");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setProcessing(true);
+    try {
+      await payrollService.approvePayroll(period.id);
+      alert("Payroll approved successfully");
+      onRefresh?.();
+      onClose();
+    } catch (error: any) {
+      alert(error.message || "Failed to approve payroll");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -100,7 +135,7 @@ export default function PayrollDetailDrawer({
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Total Amount</p>
                   <p className="text-sm font-semibold text-[#0F172A]">
-                    {period.totalAmount > 0 ? formatCurrency(period.totalAmount) : "Not calculated"}
+                    {period.totalAmount && period.totalAmount > 0 ? formatCurrency(period.totalAmount) : "Not calculated"}
                   </p>
                 </div>
               </div>
@@ -145,8 +180,20 @@ export default function PayrollDetailDrawer({
               <Button
                 variant="default"
                 className="flex-1 bg-[#2563EB] hover:bg-[#1D4ED8] text-white"
+                onClick={handleProcess}
+                disabled={processing}
               >
-                Process Payroll
+                {processing ? "Processing..." : "Process Payroll"}
+              </Button>
+            )}
+            {period.status === "processing" && (
+              <Button
+                variant="default"
+                className="flex-1 bg-[#16A34A] hover:bg-[#15803D] text-white"
+                onClick={handleApprove}
+                disabled={processing}
+              >
+                {processing ? "Approving..." : "Approve Payroll"}
               </Button>
             )}
             <Button
@@ -162,4 +209,6 @@ export default function PayrollDetailDrawer({
     </div>
   );
 }
+
+
 

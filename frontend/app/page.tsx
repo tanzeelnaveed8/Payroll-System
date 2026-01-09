@@ -7,8 +7,12 @@ export default function HomePage() {
       <div className="w-full max-w-4xl space-y-12">
         <div className="text-center space-y-6">
           <div className="flex justify-center mb-6">
-            <div className="h-24 w-24 rounded-3xl gradient-primary flex items-center justify-center shadow-glow-lg">
-              <span className="text-4xl font-bold text-white">PS</span>
+            <div className="h-32 w-32 rounded-3xl flex items-center justify-center shadow-glow-lg overflow-hidden bg-white p-4">
+              <img 
+                src="/payroll logo.png" 
+                alt="InsightPayroll Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
           </div>
           <h1 className="text-6xl font-bold text-[#0F172A]">

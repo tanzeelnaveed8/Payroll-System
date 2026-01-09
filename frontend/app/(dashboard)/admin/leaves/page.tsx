@@ -28,19 +28,33 @@ export default function ManageLeavePage() {
   const [approvalModalOpen, setApprovalModalOpen] = useState(false);
   const [approvalType, setApprovalType] = useState<"approve" | "reject" | "bulk-approve" | "bulk-reject" | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   const pageSize = 10;
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const fetchedDepartments = await leaveService.getDepartments();
+        setDepartments(fetchedDepartments);
+      } catch (err) {
+        console.error("Failed to fetch departments:", err);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const loadLeaveRequests = async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await leaveService.getLeaveRequests(filters, sort, page, pageSize);
-      setLeaveRequests(result.data);
-      setTotal(result.total);
-    } catch (err) {
-      setError("Failed to load leave requests. Please try again.");
-      console.error(err);
+      setLeaveRequests(result.data || []);
+      setTotal(result.total || 0);
+    } catch (err: any) {
+      const errorMessage = err?.message || "Failed to load leave requests. Please try again.";
+      setError(errorMessage);
+      console.error("Error loading leave requests:", err);
     } finally {
       setLoading(false);
     }
@@ -182,7 +196,7 @@ export default function ManageLeavePage() {
       <LeaveFilters
         filters={filters}
         onFilterChange={handleFilterChange}
-        departments={leaveService.getDepartments()}
+        departments={departments}
       />
 
       {error && (
@@ -246,5 +260,7 @@ export default function ManageLeavePage() {
     </div>
   );
 }
+
+
 
 

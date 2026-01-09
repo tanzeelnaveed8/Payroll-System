@@ -1,0 +1,43 @@
+{
+  "name": "payroll-backend",
+  "version": "1.0.0",
+  "description": "Payroll System Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "seed-departments": "node src/scripts/seedDepartments.js",
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "init-db": "node src/scripts/initDatabase.js",
+    "test-connection": "node src/scripts/testConnection.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "payroll",
+    "mongodb",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3",
+    "multer": "^2.0.2",
+    "node-cache": "^5.1.2",
+    "pdfkit": "^0.17.2",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "nodemon": "^3.0.2"
+  }
+}

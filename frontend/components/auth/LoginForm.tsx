@@ -1,21 +1,70 @@
 "use client";
 
+import { useState } from "react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import Link from "next/link";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 interface LoginFormProps {
   onFlip: () => void;
 }
 
 export default function LoginForm({ onFlip }: LoginFormProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { login } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    
+    if (!email.trim() || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+    
+    setLoading(true);
+
+    try {
+      await login(email.trim(), password);
+    } catch (err: unknown) {
+      let errorMessage = "Login failed. Please try again.";
+      
+      if (err instanceof Error) {
+        // Try to parse error message if it contains JSON
+        try {
+          const errorData = JSON.parse(err.message);
+          if (errorData.errors && Array.isArray(errorData.errors)) {
+            errorMessage = errorData.errors.map((e: { message: string }) => e.message).join(', ');
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else {
+            errorMessage = err.message;
+          }
+        } catch {
+          errorMessage = err.message || errorMessage;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Card className="w-full h-full glass-effect">
       <CardHeader>
         <div className="flex flex-col items-center space-y-4">
-          <div className="h-16 w-16 rounded-2xl gradient-primary flex items-center justify-center shadow-glow">
-            <span className="text-2xl font-bold text-white">PS</span>
+          <div className="h-20 w-20 rounded-2xl flex items-center justify-center shadow-glow overflow-hidden bg-white p-2">
+            <img 
+              src="/payroll logo.png" 
+              alt="InsightPayroll Logo" 
+              className="w-full h-full object-contain"
+            />
           </div>
           <CardTitle className="text-3xl font-bold text-[#0F172A]">Welcome Back</CardTitle>
           <p className="text-sm text-[#64748B]">
@@ -24,7 +73,12 @@ export default function LoginForm({ onFlip }: LoginFormProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <form className="space-y-5">
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20">
+            <p className="text-sm text-[#DC2626]">{error}</p>
+          </div>
+        )}
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label
               htmlFor="login-email"
@@ -36,7 +90,10 @@ export default function LoginForm({ onFlip }: LoginFormProps) {
               id="login-email"
               type="email"
               placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="space-y-2">
@@ -50,7 +107,10 @@ export default function LoginForm({ onFlip }: LoginFormProps) {
               id="login-password"
               type="password"
               placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
           </div>
           <div className="flex items-center text-sm">
@@ -58,12 +118,19 @@ export default function LoginForm({ onFlip }: LoginFormProps) {
               <input
                 type="checkbox"
                 className="rounded border-input text-primary focus:ring-2 focus:ring-primary"
+                disabled={loading}
               />
               <span className="text-[#0F172A]">Remember me</span>
             </label>
           </div>
-          <Button type="submit" variant="gradient" className="w-full" size="lg">
-            Sign In
+          <Button 
+            type="submit" 
+            variant="gradient" 
+            className="w-full" 
+            size="lg"
+            disabled={loading}
+          >
+            {loading ? "Signing In..." : "Sign In"}
           </Button>
         </form>
         <div className="mt-6 text-center">
@@ -73,41 +140,11 @@ export default function LoginForm({ onFlip }: LoginFormProps) {
               type="button"
               onClick={onFlip}
               className="text-[#2563EB] hover:text-[#1D4ED8] font-bold transition-colors"
+              disabled={loading}
             >
               Sign Up
             </button>
           </p>
-        </div>
-        <div className="mt-6 pt-6 border-t border-border/50">
-          <p className="text-xs text-center text-[#64748B] mb-3">
-            Demo Access (UI Only)
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/admin"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#2563EB]/10 text-[#2563EB] hover:bg-[#2563EB]/20 transition-colors font-medium"
-            >
-              Admin
-            </Link>
-            <Link
-              href="/hr"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#2563EB]/10 text-[#2563EB] hover:bg-[#2563EB]/20 transition-colors font-medium"
-            >
-              HR
-            </Link>
-            <Link
-              href="/manager"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#2563EB]/10 text-[#2563EB] hover:bg-[#2563EB]/20 transition-colors font-medium"
-            >
-              Manager
-            </Link>
-            <Link
-              href="/employee"
-              className="text-xs px-3 py-1.5 rounded-lg bg-[#2563EB]/10 text-[#2563EB] hover:bg-[#2563EB]/20 transition-colors font-medium"
-            >
-              Employee
-            </Link>
-          </div>
         </div>
       </CardContent>
     </Card>

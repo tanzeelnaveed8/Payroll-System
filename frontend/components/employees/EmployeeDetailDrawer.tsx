@@ -4,6 +4,7 @@ import { Employee } from "@/lib/services/employeeService";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import EmployeeTasks from "./EmployeeTasks";
 import { cn } from "@/lib/utils";
 
 interface EmployeeDetailDrawerProps {
@@ -57,16 +58,25 @@ export default function EmployeeDetailDrawer({
 
         <div className="p-6 space-y-6">
           <div className="flex items-center gap-4 pb-6 border-b border-slate-200">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">
-                {employee.name.charAt(0).toUpperCase()}
-              </span>
+            <div className="h-20 w-20 rounded-full overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
+              {employee.photo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={employee.photo}
+                  alt={employee.name || "Employee"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-2xl font-bold text-white">
+                  {employee.name ? employee.name.charAt(0).toUpperCase() : "?"}
+                </span>
+              )}
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-[#0F172A]">{employee.name}</h3>
-              <p className="text-sm text-[#64748B]">{employee.email}</p>
-              <Badge className={cn("mt-2", getStatusBadge(employee.status))}>
-                {employee.status.replace("-", " ")}
+              <h3 className="text-2xl font-bold text-[#0F172A]">{employee.name || "Unknown Employee"}</h3>
+              <p className="text-sm text-[#64748B]">{employee.email || "No email"}</p>
+              <Badge className={cn("mt-2", getStatusBadge(employee.status || "active"))}>
+                {employee.status ? employee.status.replace("-", " ") : "Active"}
               </Badge>
             </div>
           </div>
@@ -79,22 +89,22 @@ export default function EmployeeDetailDrawer({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Department</p>
-                  <p className="text-sm font-medium text-[#0F172A]">{employee.department}</p>
+                  <p className="text-sm font-medium text-[#0F172A]">{employee.department || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Role</p>
-                  <p className="text-sm font-medium text-[#0F172A]">{employee.role}</p>
+                  <p className="text-sm font-medium text-[#0F172A] capitalize">{employee.role || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Employment Type</p>
                   <p className="text-sm font-medium text-[#0F172A] capitalize">
-                    {employee.employmentType.replace("-", " ")}
+                    {employee.employmentType ? employee.employmentType.replace("-", " ") : "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Salary Type</p>
                   <p className="text-sm font-medium text-[#0F172A] capitalize">
-                    {employee.salaryType}
+                    {(employee as any).salaryType || (employee.baseSalary ? "Annual" : employee.hourlyRate ? "Hourly" : "N/A")}
                   </p>
                 </div>
               </div>
@@ -110,22 +120,22 @@ export default function EmployeeDetailDrawer({
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Join Date</p>
                   <p className="text-sm font-medium text-[#0F172A]">
-                    {new Date(employee.joinDate).toLocaleDateString()}
+                    {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "N/A"}
                   </p>
                 </div>
-                {employee.contractStart && (
+                {(employee as any).contractStart && (
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Contract Start</p>
                     <p className="text-sm font-medium text-[#0F172A]">
-                      {new Date(employee.contractStart).toLocaleDateString()}
+                      {new Date((employee as any).contractStart).toLocaleDateString()}
                     </p>
                   </div>
                 )}
-                {employee.contractEnd && (
+                {(employee as any).contractEnd && (
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Contract End</p>
                     <p className="text-sm font-medium text-[#0F172A]">
-                      {new Date(employee.contractEnd).toLocaleDateString()}
+                      {new Date((employee as any).contractEnd).toLocaleDateString()}
                     </p>
                   </div>
                 )}
@@ -143,16 +153,22 @@ export default function EmployeeDetailDrawer({
                   <div className="h-2 w-2 rounded-full bg-[#16A34A]"></div>
                   <div>
                     <p className="text-sm font-medium text-[#0F172A]">
-                      {employee.status.charAt(0).toUpperCase() + employee.status.slice(1).replace("-", " ")}
+                      {employee.status 
+                        ? employee.status.charAt(0).toUpperCase() + employee.status.slice(1).replace("-", " ")
+                        : "Active"}
                     </p>
                     <p className="text-xs text-[#64748B]">
-                      Since {new Date(employee.joinDate).toLocaleDateString()}
+                      {employee.joinDate 
+                        ? `Since ${new Date(employee.joinDate).toLocaleDateString()}`
+                        : "No join date"}
                     </p>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          <EmployeeTasks employeeId={employee.id} />
 
           <div className="flex gap-3 pt-4 border-t border-slate-200">
             <Button
@@ -173,4 +189,5 @@ export default function EmployeeDetailDrawer({
     </div>
   );
 }
+
 

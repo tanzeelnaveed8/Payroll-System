@@ -1,9 +1,66 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
+import { adminService } from "@/lib/services/adminService";
+import type { AdminDashboardData } from "@/lib/api/admin";
 
 export default function AdminDashboardPage() {
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await adminService.getDashboardData();
+        setDashboardData(data);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-[#64748B]">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return null;
+  }
+
+  const { kpis, recentPayrollActivity, departmentBreakdown } = dashboardData;
+  const maxEmployees = departmentBreakdown.departments.length > 0
+    ? Math.max(...departmentBreakdown.departments.map(d => d.employees))
+    : 1;
   return (
     <div className="space-y-4 sm:space-y-6 lg:space-y-8 p-4 sm:p-6 lg:p-0">
       {/* Header Section - Mobile First */}
@@ -63,16 +120,18 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">247</p>
-              <Badge className="bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20 text-xs">
-                +12%
-              </Badge>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">{kpis.totalEmployees}</p>
+              {kpis.employeeGrowth !== 0 && (
+                <Badge className={`${kpis.employeeGrowth > 0 ? 'bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20' : 'bg-red-100 text-red-700 border-red-200'} text-xs`}>
+                  {kpis.employeeGrowth > 0 ? '+' : ''}{kpis.employeeGrowth}%
+                </Badge>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-[#64748B] mt-2">
               Active employees across all departments
             </p>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-              <p className="text-xs text-[#64748B]">Last 30 days: +18 new hires</p>
+              <p className="text-xs text-[#64748B]">Last 30 days: +{kpis.newHiresLast30Days} new hires</p>
             </div>
           </CardContent>
         </Card>
@@ -93,16 +152,22 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">$2.4M</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">
+                {adminService.formatLargeCurrency(kpis.payrollStatus.total)}
+              </p>
               <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs">
-                Current
+                {kpis.payrollStatus.status}
               </Badge>
             </div>
             <p className="text-xs sm:text-sm text-[#64748B] mt-2">
               Total payroll for current period
             </p>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-              <p className="text-xs text-[#64748B]">Next payroll: Dec 15, 2024</p>
+              <p className="text-xs text-[#64748B]">
+                {kpis.payrollStatus.nextPayday 
+                  ? `Next payroll: ${adminService.formatDate(kpis.payrollStatus.nextPayday)}`
+                  : 'No upcoming payroll'}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -123,16 +188,20 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">23</p>
-              <Badge className="bg-[#F59E0B] text-white border-[#F59E0B] text-xs">
-                Urgent
-              </Badge>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">{kpis.pendingApprovals}</p>
+              {kpis.pendingApprovals > 0 && (
+                <Badge className="bg-[#F59E0B] text-white border-[#F59E0B] text-xs">
+                  Urgent
+                </Badge>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-[#64748B] mt-2">
               Requires immediate attention
             </p>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-              <p className="text-xs text-[#64748B]">12 time sheets • 8 leave requests • 3 payroll</p>
+              <p className="text-xs text-[#64748B]">
+                {kpis.pendingTimesheets} time sheets • {kpis.pendingLeaveRequests} leave requests • {kpis.pendingPayroll} payroll
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -153,7 +222,7 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2 flex-wrap">
-              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">12</p>
+              <p className="text-3xl sm:text-4xl font-bold text-[#0F172A]">{kpis.totalDepartments}</p>
               <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs">
                 Active
               </Badge>
@@ -162,7 +231,9 @@ export default function AdminDashboardPage() {
               Active departments in organization
             </p>
             <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-slate-100">
-              <p className="text-xs text-[#64748B]">Largest: Engineering (89 employees)</p>
+              <p className="text-xs text-[#64748B]">
+                {departmentBreakdown.largestDepartment || 'No departments'}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -175,7 +246,9 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xs sm:text-sm font-medium text-[#64748B]">Average Salary</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">$68,450</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">
+              {adminService.formatCurrency(kpis.averageSalary)}
+            </p>
             <p className="text-xs text-[#64748B] mt-1">Per employee annually</p>
           </CardContent>
         </Card>
@@ -185,7 +258,7 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xs sm:text-sm font-medium text-[#64748B]">Leave Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">34</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{kpis.leaveRequestsThisMonth}</p>
             <p className="text-xs text-[#64748B] mt-1">Pending this month</p>
           </CardContent>
         </Card>
@@ -195,7 +268,7 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xs sm:text-sm font-medium text-[#64748B]">Time Sheets</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">89%</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#0F172A]">{kpis.timesheetCompletionRate}%</p>
             <p className="text-xs text-[#64748B] mt-1">Completion rate</p>
           </CardContent>
         </Card>
@@ -205,7 +278,7 @@ export default function AdminDashboardPage() {
             <CardTitle className="text-xs sm:text-sm font-medium text-[#64748B]">Compliance</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl sm:text-2xl font-bold text-[#16A34A]">98%</p>
+            <p className="text-xl sm:text-2xl font-bold text-[#16A34A]">{kpis.compliance}%</p>
             <p className="text-xs text-[#64748B] mt-1">Regulatory compliance</p>
           </CardContent>
         </Card>
@@ -227,45 +300,48 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3 sm:space-y-4">
-              {[
-                { period: "November 2024", amount: "$2,450,000", status: "Completed", date: "Nov 30, 2024", employees: 247 },
-                { period: "October 2024", amount: "$2,380,000", status: "Completed", date: "Oct 31, 2024", employees: 245 },
-                { period: "September 2024", amount: "$2,320,000", status: "Completed", date: "Sep 30, 2024", employees: 242 },
-                { period: "December 2024", amount: "$2,400,000", status: "Processing", date: "In Progress", employees: 247 },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      item.status === "Completed" ? "bg-[#16A34A]/10" : "bg-blue-100"
-                    }`}>
-                      {item.status === "Completed" ? (
-                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      ) : (
-                        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm sm:text-base text-[#0F172A] truncate">{item.period}</p>
-                      <p className="text-xs sm:text-sm text-[#64748B]">{item.employees} employees • {item.date}</p>
-                    </div>
-                  </div>
-                  <div className="flex sm:flex-col items-start sm:items-end gap-2 sm:gap-1">
-                    <p className="font-bold text-sm sm:text-base text-[#0F172A]">{item.amount}</p>
-                    <Badge
-                      className={item.status === "Completed" ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20" : "bg-[#2563EB] text-white border-[#2563EB]"}
-                    >
-                      {item.status}
-                    </Badge>
-                  </div>
+              {recentPayrollActivity.length === 0 ? (
+                <div className="text-center py-8 text-[#64748B]">
+                  <p className="text-sm">No payroll activity found</p>
                 </div>
-              ))}
+              ) : (
+                recentPayrollActivity.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        item.status === "Completed" ? "bg-[#16A34A]/10" : "bg-blue-100"
+                      }`}>
+                        {item.status === "Completed" ? (
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm sm:text-base text-[#0F172A] truncate">{item.period}</p>
+                        <p className="text-xs sm:text-sm text-[#64748B]">{item.employees} employees • {item.date}</p>
+                      </div>
+                    </div>
+                    <div className="flex sm:flex-col items-start sm:items-end gap-2 sm:gap-1">
+                      <p className="font-bold text-sm sm:text-base text-[#0F172A]">
+                        {adminService.formatLargeCurrency(item.amount)}
+                      </p>
+                      <Badge
+                        className={item.status === "Completed" ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20" : "bg-[#2563EB] text-white border-[#2563EB]"}
+                      >
+                        {item.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -323,6 +399,15 @@ export default function AdminDashboardPage() {
                   📅 Manage Leave
                 </Button>
               </Link>
+              <Link href="/admin/tasks" className="w-full block">
+                <Button 
+                  variant="gradient" 
+                  className="w-full justify-start text-sm sm:text-base bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:opacity-90" 
+                  size="default"
+                >
+                  ✅ Manage Tasks
+                </Button>
+              </Link>
               <Link href="/admin/settings" className="w-full block">
                 <Button 
                   variant="gradient" 
@@ -351,46 +436,47 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { name: "Engineering", employees: 89, payroll: "$6.2M", bgColor: "bg-blue-100", barColor: "bg-blue-500" },
-              { name: "Sales", employees: 45, payroll: "$3.1M", bgColor: "bg-green-100", barColor: "bg-green-500" },
-              { name: "Marketing", employees: 32, payroll: "$2.1M", bgColor: "bg-purple-100", barColor: "bg-purple-500" },
-              { name: "HR", employees: 18, payroll: "$1.2M", bgColor: "bg-pink-100", barColor: "bg-pink-500" },
-              { name: "Finance", employees: 24, payroll: "$1.8M", bgColor: "bg-amber-100", barColor: "bg-amber-500" },
-              { name: "Operations", employees: 39, payroll: "$2.6M", bgColor: "bg-indigo-100", barColor: "bg-indigo-500" },
-            ].map((dept, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-lg border border-slate-200 hover:shadow-md transition-all bg-white"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm sm:text-base text-[#0F172A]">{dept.name}</h4>
-                  <div className={`h-8 w-8 rounded-lg ${dept.bgColor} flex items-center justify-center flex-shrink-0`}>
-                    <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+            {departmentBreakdown.departments.length === 0 ? (
+              <div className="col-span-full text-center py-8 text-[#64748B]">
+                <p className="text-sm">No departments found</p>
+              </div>
+            ) : (
+              departmentBreakdown.departments.map((dept) => (
+                <div
+                  key={dept.id}
+                  className="p-4 rounded-lg border border-slate-200 hover:shadow-md transition-all bg-white"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-sm sm:text-base text-[#0F172A]">{dept.name}</h4>
+                    <div className={`h-8 w-8 rounded-lg ${dept.bgColor} flex items-center justify-center flex-shrink-0`}>
+                      <svg className="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs sm:text-sm">
-                    <span className="text-[#64748B]">Employees</span>
-                    <span className="font-semibold text-[#0F172A]">{dept.employees}</span>
-                  </div>
-                  <div className="flex justify-between text-xs sm:text-sm">
-                    <span className="text-[#64748B]">Annual Payroll</span>
-                    <span className="font-semibold text-[#0F172A]">{dept.payroll}</span>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div
-                        className={`${dept.barColor} h-2 rounded-full transition-all`}
-                        style={{ width: `${(dept.employees / 89) * 100}%` }}
-                      ></div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs sm:text-sm">
+                      <span className="text-[#64748B]">Employees</span>
+                      <span className="font-semibold text-[#0F172A]">{dept.employees}</span>
+                    </div>
+                    <div className="flex justify-between text-xs sm:text-sm">
+                      <span className="text-[#64748B]">Annual Payroll</span>
+                      <span className="font-semibold text-[#0F172A]">
+                        {adminService.formatLargeCurrency(dept.payroll)}
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <div className="w-full bg-slate-200 rounded-full h-2">
+                        <div
+                          className={`${dept.barColor} h-2 rounded-full transition-all`}
+                          style={{ width: `${maxEmployees > 0 ? (dept.employees / maxEmployees) * 100 : 0}%` }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

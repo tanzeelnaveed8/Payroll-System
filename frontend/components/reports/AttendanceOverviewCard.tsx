@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { AttendanceOverview } from "@/lib/services/reportsService";
+import { AttendanceOverview } from "@/lib/api/reports";
 
 interface AttendanceOverviewCardProps {
   data: AttendanceOverview;
@@ -65,4 +65,6 @@ export default function AttendanceOverviewCard({
     </Card>
   );
 }
+
+
 

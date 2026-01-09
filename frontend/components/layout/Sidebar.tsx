@@ -15,6 +15,7 @@ const iconMap: Record<string, string> = {
   users: "👥",
   "dollar-sign": "💰",
   "bar-chart": "📈",
+  business: "🏢",
   settings: "⚙️",
   clock: "🕐",
   calendar: "📅",
@@ -59,11 +60,15 @@ export default function Sidebar({ role }: SidebarProps) {
         <div className="flex h-full flex-col">
           <div className="flex h-20 items-center px-6 border-b border-[#1E293B]">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center shadow-lg">
-                <span className="text-lg font-bold text-white">PS</span>
+              <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shadow-lg overflow-hidden p-1.5">
+                <img 
+                  src="/payroll logo.png" 
+                  alt="InsightPayroll Logo" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white">Payroll System</h1>
+                <h1 className="text-lg font-bold text-white">InsightPayroll</h1>
                 <p className="text-xs text-slate-400 capitalize">{role}</p>
               </div>
             </div>
@@ -97,15 +102,18 @@ export default function Sidebar({ role }: SidebarProps) {
             })}
           </nav>
           <div className="p-4 border-t border-[#1E293B]">
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <Link
+              href={role === "admin" ? "/admin/profile" : role === "manager" ? "/manager/profile" : "/employee/profile"}
+              onClick={() => setIsMobileOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+            >
               <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-center">
-                <span className="text-xs font-bold text-white">U</span>
+                <span className="text-xs font-bold text-white">{role.charAt(0).toUpperCase()}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">User Profile</p>
-                <p className="text-xs text-slate-400 truncate">Settings & Preferences</p>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </aside>

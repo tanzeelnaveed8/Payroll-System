@@ -1,87 +1,88 @@
-export type PayrollStatus = "draft" | "processing" | "completed";
+import { payrollApi, type PayrollPeriod, type Paystub } from '@/lib/api/payroll';
 
-export interface PayrollPeriod {
-  id: string;
-  periodStart: string;
-  periodEnd: string;
-  employeeCount: number;
-  totalAmount: number;
-  status: PayrollStatus;
-  department?: string;
-}
+export type PayrollStatus = "draft" | "processing" | "completed" | "cancelled";
+
+export type { PayrollPeriod, Paystub } from '@/lib/api/payroll';
 
 export interface PayrollFilter {
   period?: string;
   department?: string;
   status?: PayrollStatus;
+  departmentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }
 
-const mockPayrollPeriods: PayrollPeriod[] = [
-  {
-    id: "pay-001",
-    periodStart: "2024-11-01",
-    periodEnd: "2024-11-30",
-    employeeCount: 45,
-    totalAmount: 245000,
-    status: "completed",
-  },
-  {
-    id: "pay-002",
-    periodStart: "2024-12-01",
-    periodEnd: "2024-12-31",
-    employeeCount: 47,
-    totalAmount: 258000,
-    status: "processing",
-  },
-  {
-    id: "pay-003",
-    periodStart: "2025-01-01",
-    periodEnd: "2025-01-31",
-    employeeCount: 48,
-    totalAmount: 0,
-    status: "draft",
-  },
-  {
-    id: "pay-004",
-    periodStart: "2024-10-01",
-    periodEnd: "2024-10-31",
-    employeeCount: 44,
-    totalAmount: 238000,
-    status: "completed",
-  },
-  {
-    id: "pay-005",
-    periodStart: "2024-09-01",
-    periodEnd: "2024-09-30",
-    employeeCount: 43,
-    totalAmount: 232000,
-    status: "completed",
-  },
-];
-
 export const payrollService = {
-  async getPayrollPeriods(
-    filters: PayrollFilter
-  ): Promise<PayrollPeriod[]> {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    let filtered = [...mockPayrollPeriods];
-    if (filters.status) {
-      filtered = filtered.filter((p) => p.status === filters.status);
-    }
-    if (filters.department) {
-      filtered = filtered.filter((p) => p.department === filters.department);
-    }
-    return filtered;
+  async getPayrollPeriods(filters: PayrollFilter = {}): Promise<PayrollPeriod[]> {
+    const response = await payrollApi.getPayrollPeriods(filters);
+    return response.data;
+  },
+
+  async getPayrollPeriodById(id: string): Promise<PayrollPeriod> {
+    const response = await payrollApi.getPayrollPeriodById(id);
+    return response.data.period;
+  },
+
+  async createPayrollPeriod(data: { periodStart: string; periodEnd: string; payDate: string; departmentId?: string; department?: string }): Promise<PayrollPeriod> {
+    const response = await payrollApi.createPayrollPeriod(data);
+    return response.data.period;
+  },
+
+  async updatePayrollPeriod(id: string, data: Partial<PayrollPeriod>): Promise<PayrollPeriod> {
+    const response = await payrollApi.updatePayrollPeriod(id, data);
+    return response.data.period;
+  },
+
+  async processPayroll(periodId: string): Promise<void> {
+    await payrollApi.processPayroll(periodId);
+  },
+
+  async approvePayroll(periodId: string): Promise<void> {
+    await payrollApi.approvePayroll(periodId);
   },
 
   async getCurrentPeriod(): Promise<PayrollPeriod | null> {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return mockPayrollPeriods.find((p) => p.status === "processing") || mockPayrollPeriods[0];
+    const response = await payrollApi.getCurrentPeriod();
+    return response.data.period || null;
   },
 
   async getNextPayrollDate(): Promise<string> {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    return "2025-02-01";
+    const response = await payrollApi.getNextPayDate();
+    return response.data.nextPayDate || '';
+  },
+
+  async getPaystubs(filters: { employeeId?: string; payrollPeriodId?: string; status?: string } = {}): Promise<Paystub[]> {
+    const response = await payrollApi.getPaystubs(filters);
+    return response.data;
+  },
+
+  async getPaystubById(id: string): Promise<Paystub> {
+    const response = await payrollApi.getPaystubById(id);
+    return response.data.paystub;
+  },
+
+  async getPaystubPDF(id: string): Promise<void> {
+    const blob = await payrollApi.getPaystubPDF(id);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `paystub-${id}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  async getEmployeePaystubs(employeeId: string): Promise<Paystub[]> {
+    const response = await payrollApi.getEmployeePaystubs(employeeId);
+    return response.data;
+  },
+
+  async calculatePayroll(periodId: string): Promise<void> {
+    await payrollApi.calculatePayroll(periodId);
   },
 };
+
+
 
