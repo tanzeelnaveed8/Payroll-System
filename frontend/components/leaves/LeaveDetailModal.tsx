@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
-import type { LeaveRequest } from "@/lib/services/leaveService";
+import type { LeaveRequest, LeaveType } from "@/lib/services/leaveService";
 
 interface LeaveDetailModalProps {
   open: boolean;
@@ -33,12 +33,16 @@ export default function LeaveDetailModal({
     return <Badge className={variants[status].className} variant="outline">{variants[status].label}</Badge>;
   };
 
-  const getLeaveTypeBadge = (type: LeaveRequest["leaveType"]) => {
-    const variants = {
+  const getLeaveTypeBadge = (type: LeaveType) => {
+    const variants: Record<LeaveType, { className: string; label: string }> = {
       paid: { className: "bg-blue-100 text-blue-700 border-blue-200", label: "Paid" },
       unpaid: { className: "bg-slate-100 text-slate-700 border-slate-200", label: "Unpaid" },
       sick: { className: "bg-orange-100 text-orange-700 border-orange-200", label: "Sick" },
       annual: { className: "bg-purple-100 text-purple-700 border-purple-200", label: "Annual" },
+      casual: { className: "bg-amber-100 text-amber-700 border-amber-200", label: "Casual" },
+      maternity: { className: "bg-pink-100 text-pink-700 border-pink-200", label: "Maternity" },
+      paternity: { className: "bg-indigo-100 text-indigo-700 border-indigo-200", label: "Paternity" },
+      emergency: { className: "bg-red-100 text-red-700 border-red-200", label: "Emergency" },
     };
     return <Badge className={variants[type].className} variant="outline">{variants[type].label}</Badge>;
   };
@@ -130,55 +134,57 @@ export default function LeaveDetailModal({
           </div>
 
           {/* Leave Balance Impact */}
-          <div className="border-b border-slate-200 pb-4">
-            <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Leave Balance Impact</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <p className="text-xs text-[#64748B] mb-1">Paid Leave</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-[#64748B] line-through">
-                    {leaveRequest.leaveBalanceBefore.paid}
-                  </p>
-                  <p className="text-sm font-semibold text-[#0F172A]">
-                    → {leaveRequest.leaveBalanceAfter.paid}
-                  </p>
+          {leaveRequest.leaveBalanceBefore && leaveRequest.leaveBalanceAfter && (
+            <div className="border-b border-slate-200 pb-4">
+              <h3 className="text-sm font-semibold text-[#0F172A] mb-3">Leave Balance Impact</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-xs text-[#64748B] mb-1">Paid Leave</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm text-[#64748B] line-through">
+                      {leaveRequest.leaveBalanceBefore.paid}
+                    </p>
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      → {leaveRequest.leaveBalanceAfter.paid}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#64748B] mb-1">Unpaid Leave</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-[#64748B] line-through">
-                    {leaveRequest.leaveBalanceBefore.unpaid}
-                  </p>
-                  <p className="text-sm font-semibold text-[#0F172A]">
-                    → {leaveRequest.leaveBalanceAfter.unpaid}
-                  </p>
+                <div>
+                  <p className="text-xs text-[#64748B] mb-1">Unpaid Leave</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm text-[#64748B] line-through">
+                      {leaveRequest.leaveBalanceBefore.unpaid}
+                    </p>
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      → {leaveRequest.leaveBalanceAfter.unpaid}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#64748B] mb-1">Sick Leave</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-[#64748B] line-through">
-                    {leaveRequest.leaveBalanceBefore.sick}
-                  </p>
-                  <p className="text-sm font-semibold text-[#0F172A]">
-                    → {leaveRequest.leaveBalanceAfter.sick}
-                  </p>
+                <div>
+                  <p className="text-xs text-[#64748B] mb-1">Sick Leave</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm text-[#64748B] line-through">
+                      {leaveRequest.leaveBalanceBefore.sick}
+                    </p>
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      → {leaveRequest.leaveBalanceAfter.sick}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-[#64748B] mb-1">Annual Leave</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-sm text-[#64748B] line-through">
-                    {leaveRequest.leaveBalanceBefore.annual}
-                  </p>
-                  <p className="text-sm font-semibold text-[#0F172A]">
-                    → {leaveRequest.leaveBalanceAfter.annual}
-                  </p>
+                <div>
+                  <p className="text-xs text-[#64748B] mb-1">Annual Leave</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-sm text-[#64748B] line-through">
+                      {leaveRequest.leaveBalanceBefore.annual}
+                    </p>
+                    <p className="text-sm font-semibold text-[#0F172A]">
+                      → {leaveRequest.leaveBalanceAfter.annual}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Review Information */}
           {!isPending && (
@@ -187,7 +193,11 @@ export default function LeaveDetailModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Reviewed By</p>
-                  <p className="text-sm text-[#0F172A]">{leaveRequest.reviewedBy || "N/A"}</p>
+                  <p className="text-sm text-[#0F172A]">
+                    {typeof leaveRequest.reviewedBy === 'object' 
+                      ? leaveRequest.reviewedBy.name 
+                      : leaveRequest.reviewedBy || "N/A"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Reviewed Date</p>

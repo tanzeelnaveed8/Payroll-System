@@ -5,11 +5,11 @@ import { Card, CardContent } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import Button from "@/components/ui/Button";
-import type { TimeSheetFilters } from "@/lib/services/timesheetService";
+import type { TimesheetFilter } from "@/lib/services/timesheetService";
 
 interface TimeSheetFiltersProps {
-  filters: TimeSheetFilters;
-  onFilterChange: (filters: TimeSheetFilters) => void;
+  filters: TimesheetFilter;
+  onFilterChange: (filters: TimesheetFilter) => void;
   departments: string[];
   roles: string[];
 }
@@ -20,20 +20,20 @@ export default function TimeSheetFilters({
   departments,
   roles,
 }: TimeSheetFiltersProps) {
-  const [localFilters, setLocalFilters] = useState<TimeSheetFilters>(filters);
+  const [localFilters, setLocalFilters] = useState<TimesheetFilter>(filters);
 
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 
-  const handleChange = (key: keyof TimeSheetFilters, value: string) => {
+  const handleChange = (key: keyof TimesheetFilter, value: string) => {
     const newFilters = { ...localFilters, [key]: value || undefined };
     setLocalFilters(newFilters);
     onFilterChange(newFilters);
   };
 
   const handleReset = () => {
-    const resetFilters: TimeSheetFilters = {};
+    const resetFilters: TimesheetFilter = {};
     setLocalFilters(resetFilters);
     onFilterChange(resetFilters);
   };
@@ -118,7 +118,8 @@ export default function TimeSheetFilters({
               onChange={(e) => handleChange("status", e.target.value as any)}
             >
               <option value="">All Status</option>
-              <option value="pending">Pending</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </Select>

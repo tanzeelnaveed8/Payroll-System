@@ -6,7 +6,7 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
-import { timesheetService, type Timesheet } from "@/lib/services/timesheetService";
+import { timesheetService, type Timesheet, type TimesheetStatus, type TimesheetFilter } from "@/lib/services/timesheetService";
 import { toast } from "@/lib/hooks/useToast";
 
 export default function DepartmentLeadTimesheetsPage() {
@@ -36,11 +36,17 @@ export default function DepartmentLeadTimesheetsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [timesheetData, deptData, roleData] = await Promise.all([
-        timesheetService.getTimesheets({
-          ...filters,
+      const filterParams: TimesheetFilter = {
+          employeeName: filters.employeeName || undefined,
+          department: filters.department || undefined,
+          role: filters.role || undefined,
+          status: filters.status ? (filters.status as TimesheetStatus) : undefined,
+          dateFrom: filters.dateFrom || undefined,
+          dateTo: filters.dateTo || undefined,
           limit: 100,
-        }),
+        };
+      const [timesheetData, deptData, roleData] = await Promise.all([
+        timesheetService.getTimesheets(filterParams),
         timesheetService.getUniqueDepartments(),
         timesheetService.getUniqueRoles(),
       ]);

@@ -17,14 +17,14 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
   const [showAddDeduction, setShowAddDeduction] = useState(false);
 
   const handleBonusToggle = (id: string) => {
-    const bonuses = settings.bonuses.map((b) =>
+    const bonuses = (settings.bonuses || []).map((b) =>
       b.id === id ? { ...b, enabled: !b.enabled } : b
     );
     onChange({ ...settings, bonuses });
   };
 
   const handleDeductionToggle = (id: string) => {
-    const deductions = settings.deductions.map((d) =>
+    const deductions = (settings.deductions || []).map((d) =>
       d.id === id ? { ...d, enabled: !d.enabled } : d
     );
     onChange({ ...settings, deductions });
@@ -38,7 +38,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
       value: 0,
       enabled: true,
     };
-    onChange({ ...settings, bonuses: [...settings.bonuses, newBonus] });
+    onChange({ ...settings, bonuses: [...(settings.bonuses || []), newBonus] });
     setShowAddBonus(false);
   };
 
@@ -50,7 +50,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
       value: 0,
       enabled: true,
     };
-    onChange({ ...settings, deductions: [...settings.deductions, newDeduction] });
+    onChange({ ...settings, deductions: [...(settings.deductions || []), newDeduction] });
     setShowAddDeduction(false);
   };
 
@@ -66,7 +66,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
               Payment Frequency <span className="text-[#DC2626]">*</span>
             </label>
             <Select
-              value={settings.salaryCycle}
+              value={settings.salaryCycle || "monthly"}
               onChange={(e) =>
                 onChange({ ...settings, salaryCycle: e.target.value as "monthly" | "bi-weekly" })
               }
@@ -91,7 +91,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings.overtimeRules.enabled}
+                checked={settings.overtimeRules?.enabled ?? false}
                 onChange={(e) =>
                   onChange({
                     ...settings,
@@ -104,7 +104,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
             </label>
           </div>
 
-          {settings.overtimeRules.enabled && (
+          {settings.overtimeRules?.enabled && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -115,7 +115,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                     type="number"
                     step="0.1"
                     min="1"
-                    value={settings.overtimeRules.rate}
+                    value={settings.overtimeRules?.rate}
                     onChange={(e) =>
                       onChange({
                         ...settings,
@@ -137,7 +137,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   <Input
                     type="number"
                     min="0"
-                    value={settings.overtimeRules.threshold}
+                    value={settings.overtimeRules?.threshold}
                     onChange={(e) =>
                       onChange({
                         ...settings,
@@ -172,9 +172,9 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {settings.bonuses.map((bonus) => (
+          {(settings.bonuses || []).map((bonus, index) => (
             <div
-              key={bonus.id}
+              key={bonus.id || index}
               className="p-4 border border-slate-200 rounded-lg space-y-3"
             >
               <div className="flex items-center justify-between">
@@ -183,15 +183,15 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                     <input
                       type="checkbox"
                       checked={bonus.enabled}
-                      onChange={() => handleBonusToggle(bonus.id)}
+                      onChange={() => handleBonusToggle(bonus.id || "")}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
                   </label>
                   <Input
-                    value={bonus.name}
+                    value={bonus.name || ""}
                     onChange={(e) => {
-                      const bonuses = settings.bonuses.map((b) =>
+                      const bonuses = (settings.bonuses || []).map((b) =>
                         b.id === bonus.id ? { ...b, name: e.target.value } : b
                       );
                       onChange({ ...settings, bonuses });
@@ -206,7 +206,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   onClick={() => {
                     onChange({
                       ...settings,
-                      bonuses: settings.bonuses.filter((b) => b.id !== bonus.id),
+                      bonuses: (settings.bonuses || []).filter((b) => b.id !== bonus.id),
                     });
                   }}
                   className="text-red-600 hover:text-red-700"
@@ -220,7 +220,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   <Select
                     value={bonus.type}
                     onChange={(e) => {
-                      const bonuses = settings.bonuses.map((b) =>
+                      const bonuses = (settings.bonuses || []).map((b) =>
                         b.id === bonus.id
                           ? { ...b, type: e.target.value as "fixed" | "percentage" }
                           : b
@@ -237,9 +237,9 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   <Input
                     type="number"
                     min="0"
-                    value={bonus.value}
+                    value={bonus.value ?? 0}
                     onChange={(e) => {
-                      const bonuses = settings.bonuses.map((b) =>
+                      const bonuses = (settings.bonuses || []).map((b) =>
                         b.id === bonus.id
                           ? { ...b, value: parseFloat(e.target.value) || 0 }
                           : b
@@ -270,9 +270,9 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {settings.deductions.map((deduction) => (
+          {(settings.deductions || []).map((deduction, index) => (
             <div
-              key={deduction.id}
+              key={deduction.id || index}
               className="p-4 border border-slate-200 rounded-lg space-y-3"
             >
               <div className="flex items-center justify-between">
@@ -281,15 +281,15 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                     <input
                       type="checkbox"
                       checked={deduction.enabled}
-                      onChange={() => handleDeductionToggle(deduction.id)}
+                      onChange={() => handleDeductionToggle(deduction.id || "")}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
                   </label>
                   <Input
-                    value={deduction.name}
+                    value={deduction.name || ""}
                     onChange={(e) => {
-                      const deductions = settings.deductions.map((d) =>
+                      const deductions = (settings.deductions || []).map((d) =>
                         d.id === deduction.id ? { ...d, name: e.target.value } : d
                       );
                       onChange({ ...settings, deductions });
@@ -304,7 +304,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   onClick={() => {
                     onChange({
                       ...settings,
-                      deductions: settings.deductions.filter((d) => d.id !== deduction.id),
+                      deductions: (settings.deductions || []).filter((d) => d.id !== deduction.id),
                     });
                   }}
                   className="text-red-600 hover:text-red-700"
@@ -318,7 +318,7 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   <Select
                     value={deduction.type}
                     onChange={(e) => {
-                      const deductions = settings.deductions.map((d) =>
+                      const deductions = (settings.deductions || []).map((d) =>
                         d.id === deduction.id
                           ? { ...d, type: e.target.value as "fixed" | "percentage" }
                           : d
@@ -335,9 +335,9 @@ export default function PayrollSettings({ settings, onChange }: PayrollSettingsP
                   <Input
                     type="number"
                     min="0"
-                    value={deduction.value}
+                    value={deduction.value ?? 0}
                     onChange={(e) => {
-                      const deductions = settings.deductions.map((d) =>
+                      const deductions = (settings.deductions || []).map((d) =>
                         d.id === deduction.id
                           ? { ...d, value: parseFloat(e.target.value) || 0 }
                           : d

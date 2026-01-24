@@ -399,7 +399,7 @@ export default function DepartmentLeadDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-2xl font-bold text-[#0F172A] mb-1">Recent Tasks</CardTitle>
-              <p className="text-sm text-[#64748B]">Track and manage your department's active tasks</p>
+              <p className="text-sm text-[#64748B]">Track and manage your department&apos;s active tasks</p>
             </div>
             <Link href="/department_lead/tasks">
               <Button 
@@ -430,8 +430,8 @@ export default function DepartmentLeadDashboardPage() {
             <div className="space-y-5">
               {recentTasks.map((task) => (
                 <Link 
-                  key={task.id || task._id} 
-                  href={`/department_lead/tasks/${task.id || task._id}`}
+                  key={task.id} 
+                  href={`/department_lead/tasks/${task.id}`}
                   className="block"
                 >
                   <div className="group relative p-6 bg-white border-2 border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden">

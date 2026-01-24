@@ -265,7 +265,7 @@ export default function EmployeeDashboardPage() {
             <div>
               <p className="text-sm font-semibold text-[#0F172A] mb-3">Upcoming Approved Leaves</p>
               <div className="space-y-2">
-                {leaveData.upcoming.map((leave, idx) => (
+                {leaveData.upcoming.map((leave: { date: string; type: string; days: number }, idx: number) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"

@@ -127,7 +127,7 @@ export default function AdminPayrollPage() {
         let reportId: string | undefined;
         if (existingReports.reports && existingReports.reports.length > 0) {
           // Use existing report
-          reportId = existingReports.reports[0]._id || existingReports.reports[0].id;
+          reportId = existingReports.reports[0]._id;
         } else {
           // Generate new report
           const report = await reportService.generateReport({
@@ -136,7 +136,7 @@ export default function AdminPayrollPage() {
             dateTo: new Date(period.periodEnd).toISOString().split("T")[0],
             expiresInDays: 30,
           });
-          reportId = report._id || report.id;
+          reportId = report._id;
           
           // Wait a moment for the report to be generated
           await new Promise(resolve => setTimeout(resolve, 2000));

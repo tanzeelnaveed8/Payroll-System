@@ -42,9 +42,10 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
   ];
 
   const handleWorkingDayToggle = (day: string) => {
-    const newDays = settings.workingDays.includes(day)
-      ? settings.workingDays.filter((d) => d !== day)
-      : [...settings.workingDays, day];
+    const currentDays = settings.workingDays || [];
+    const newDays = currentDays.includes(day)
+      ? currentDays.filter((d) => d !== day)
+      : [...currentDays, day];
     onChange({ ...settings, workingDays: newDays });
   };
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import LeaveRequestTable from "@/components/leaves/LeaveRequestTable";
-import LeaveFilters from "@/components/leaves/LeaveFilters";
+import LeaveFiltersComponent from "@/components/leaves/LeaveFilters";
 import LeaveDetailModal from "@/components/leaves/LeaveDetailModal";
 import ApprovalModal from "@/components/timesheets/ApprovalModal";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import {
   leaveService,
   type LeaveRequest,
-  type LeaveFilters as Filters,
+  type LeaveFilters,
   type LeaveSort,
 } from "@/lib/services/leaveService";
 
@@ -18,7 +18,7 @@ export default function ManageLeavePage() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Filters>({});
+  const [filters, setFilters] = useState<LeaveFilters>({});
   const [sort, setSort] = useState<LeaveSort>({ field: "submittedDate", direction: "desc" });
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -64,7 +64,7 @@ export default function ManageLeavePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, sort, page]);
 
-  const handleFilterChange = (newFilters: Filters) => {
+  const handleFilterChange = (newFilters: LeaveFilters) => {
     setFilters(newFilters);
     setPage(1);
   };
@@ -192,7 +192,7 @@ export default function ManageLeavePage() {
         )}
       </div>
 
-      <LeaveFilters
+      <LeaveFiltersComponent
         filters={filters}
         onFilterChange={handleFilterChange}
         departments={departments}
@@ -259,7 +259,3 @@ export default function ManageLeavePage() {
     </div>
   );
 }
-
-
-
-

@@ -39,10 +39,11 @@ export default function DepartmentLeadTeamPage() {
         _id: member._id || member.id,
         name: member.name,
         email: member.email,
+        role: 'employee',
         employeeId: member.employeeId,
         department: member.department,
         position: member.position,
-        status: member.status || 'active',
+        status: (member.status as 'active' | 'inactive' | 'on-leave' | 'terminated') || 'active',
       }));
       setEmployees(mappedEmployees);
       setTotal(mappedEmployees.length);
@@ -138,9 +139,9 @@ export default function DepartmentLeadTeamPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredEmployees.map((employee) => (
                 <Card
-                  key={employee.id || employee._id}
+                  key={employee.id}
                   className="border-2 border-slate-200 bg-white hover:border-blue-300 hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden"
-                  onClick={() => handleEmployeeClick(employee.id || employee._id || '')}
+                  onClick={() => handleEmployeeClick(employee.id || '')}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">

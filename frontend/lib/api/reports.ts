@@ -2,6 +2,8 @@ import { apiClient } from './client';
 
 export type ReportType = 'payroll' | 'attendance' | 'leave' | 'department' | 'employee' | 'financial';
 
+export type ReportData = any;
+
 export interface PayrollSummary {
   totalPayroll: number;
   employeeCount: number;
@@ -131,7 +133,7 @@ export const reportsApi = {
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== ('' as any)) {
           queryParams.append(key, String(value));
         }
       });
@@ -239,5 +241,18 @@ export const reportsApi = {
     params.append('dateFrom', dateFrom);
     params.append('dateTo', dateTo);
     return apiClient.get<QuickReportResponse>(`/reports/department-costs?${params.toString()}`);
+  },
+
+  /**
+   * GET /api/reports/executive - Get executive report (all summaries)
+   */
+  async getExecutiveReport(dateFrom: string, dateTo: string, departmentId?: string): Promise<QuickReportResponse> {
+    const params = new URLSearchParams();
+    params.append('dateFrom', dateFrom);
+    params.append('dateTo', dateTo);
+    if (departmentId) {
+      params.append('departmentId', departmentId);
+    }
+    return apiClient.get<QuickReportResponse>(`/reports/executive?${params.toString()}`);
   },
 };

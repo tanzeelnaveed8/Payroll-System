@@ -48,11 +48,12 @@ export const settingsService = {
     try {
       const response = await settingsApi.getAllSettings();
       if (response.success && response.data.settings) {
+        const settings = response.data.settings as AllSettings;
         return {
-          company: response.data.settings.company || {},
-          payroll: response.data.settings.payroll || {},
-          attendance: response.data.settings.attendance || {},
-          leavePolicies: response.data.settings.leavePolicies || [],
+          company: settings.company || {},
+          payroll: settings.payroll || {},
+          attendance: settings.attendance || {},
+          leavePolicies: settings.leavePolicies || [],
         };
       }
       throw new Error('Failed to load settings');

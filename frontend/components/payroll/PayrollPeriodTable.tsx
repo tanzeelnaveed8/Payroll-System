@@ -12,10 +12,11 @@ interface PayrollPeriodTableProps {
 }
 
 const getStatusBadge = (status: PayrollPeriod["status"]) => {
-  const styles = {
+  const styles: Record<PayrollPeriod["status"], string> = {
     draft: "bg-slate-100 text-slate-700 border-slate-200",
     processing: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20",
     completed: "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20",
+    cancelled: "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20",
   };
   return styles[status];
 };
@@ -65,7 +66,7 @@ export default function PayrollPeriodTable({ periods, onViewPeriod, onEditPeriod
                   {period.employeeCount}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-[#0F172A]">
-                  {period.totalAmount > 0 ? formatCurrency(period.totalAmount) : "-"}
+                  {(period.totalAmount || 0) > 0 ? formatCurrency(period.totalAmount || 0) : "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <Badge className={getStatusBadge(period.status)}>
@@ -130,12 +131,12 @@ export default function PayrollPeriodTable({ periods, onViewPeriod, onEditPeriod
               </div>
               <div>
                 <span className="font-medium text-[#0F172A]">Amount:</span>{" "}
-                {period.totalAmount > 0
+                {(period.totalAmount || 0) > 0
                   ? new Intl.NumberFormat("en-PK", {
                       style: "currency",
                       currency: "PKR",
                       minimumFractionDigits: 0,
-                    }).format(period.totalAmount).replace('PKR', 'Rs')
+                    }).format(period.totalAmount || 0).replace('PKR', 'Rs')
                   : "-"}
               </div>
             </div>

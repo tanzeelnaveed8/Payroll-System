@@ -58,13 +58,13 @@ export default function AttendanceRules({ rules, onChange }: AttendanceRulesProp
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={rules.overtimeEligibility.enabled}
+                checked={rules.overtimeEligibility?.enabled || false}
                 onChange={(e) =>
                   onChange({
                     ...rules,
                     overtimeEligibility: {
-                      ...rules.overtimeEligibility,
                       enabled: e.target.checked,
+                      minimumHours: rules.overtimeEligibility?.minimumHours || 40,
                     },
                   })
                 }
@@ -74,7 +74,7 @@ export default function AttendanceRules({ rules, onChange }: AttendanceRulesProp
             </label>
           </div>
 
-          {rules.overtimeEligibility.enabled && (
+          {rules.overtimeEligibility?.enabled && (
             <div className="space-y-2">
               <label className="text-sm font-semibold text-[#0F172A]">
                 Minimum Hours for Overtime <span className="text-[#DC2626]">*</span>
@@ -87,7 +87,7 @@ export default function AttendanceRules({ rules, onChange }: AttendanceRulesProp
                   onChange({
                     ...rules,
                     overtimeEligibility: {
-                      ...rules.overtimeEligibility,
+                      enabled: true,
                       minimumHours: parseInt(e.target.value) || 40,
                     },
                   })

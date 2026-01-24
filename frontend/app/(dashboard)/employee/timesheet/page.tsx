@@ -211,7 +211,7 @@ export default function EmployeeTimesheetPage() {
           {timesheets.length === 0 ? (
             <div className="text-center py-12 text-[#64748B]">
               <p className="text-sm mb-2">No timesheet entries found</p>
-              <p className="text-xs">Click "Add Entry" to start logging your hours</p>
+              <p className="text-xs">Click &quot;Add Entry&quot; to start logging your hours</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

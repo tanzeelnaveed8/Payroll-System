@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import type { LeavePolicy } from "@/lib/services/settingsService";
+import type { LeaveType } from "@/lib/services/leaveService";
 
 interface LeavePoliciesProps {
   policies: LeavePolicy[];
@@ -17,11 +18,15 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
   };
 
   const getLeaveTypeColor = (type: LeavePolicy["type"]) => {
-    const colors = {
-      paid: "bg-blue-100 text-blue-700 border-blue-200",
-      unpaid: "bg-slate-100 text-slate-700 border-slate-200",
-      sick: "bg-orange-100 text-orange-700 border-orange-200",
+    const colors: Record<LeaveType, string> = {
+      paid: "bg-green-100 text-green-700 border-green-200",
+      unpaid: "bg-gray-100 text-gray-700 border-gray-200",
+      sick: "bg-red-100 text-red-700 border-red-200",
       annual: "bg-purple-100 text-purple-700 border-purple-200",
+      casual: "bg-blue-100 text-blue-700 border-blue-200",
+      maternity: "bg-pink-100 text-pink-700 border-pink-200",
+      paternity: "bg-indigo-100 text-indigo-700 border-indigo-200",
+      emergency: "bg-orange-100 text-orange-700 border-orange-200",
     };
     return colors[type];
   };
@@ -46,7 +51,7 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
                 <input
                   type="checkbox"
                   checked={policy.enabled}
-                  onChange={(e) => handlePolicyChange(policy.id, "enabled", e.target.checked)}
+                  onChange={(e) => handlePolicyChange(policy.id || "", "enabled", e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
@@ -64,7 +69,7 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
                   min="0"
                   value={policy.maxDays}
                   onChange={(e) =>
-                    handlePolicyChange(policy.id, "maxDays", parseInt(e.target.value) || 0)
+                    handlePolicyChange(policy.id || "", "maxDays", parseInt(e.target.value) || 0)
                   }
                 />
                 <p className="text-xs text-[#64748B]">Maximum days per year</p>
@@ -80,7 +85,7 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
                   min="0"
                   value={policy.accrualRate}
                   onChange={(e) =>
-                    handlePolicyChange(policy.id, "accrualRate", parseFloat(e.target.value) || 0)
+                    handlePolicyChange(policy.id || "", "accrualRate", parseFloat(e.target.value) || 0)
                   }
                 />
                 <p className="text-xs text-[#64748B]">Days accrued per month</p>
@@ -96,7 +101,7 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
                   value={policy.carryForwardLimit}
                   onChange={(e) =>
                     handlePolicyChange(
-                      policy.id,
+                      policy.id || "",
                       "carryForwardLimit",
                       parseInt(e.target.value) || 0
                     )
@@ -109,7 +114,7 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
                 <label className="text-sm font-semibold text-[#0F172A]">Policy Name</label>
                 <Input
                   value={policy.name}
-                  onChange={(e) => handlePolicyChange(policy.id, "name", e.target.value)}
+                  onChange={(e) => handlePolicyChange(policy.id || "", "name", e.target.value)}
                   placeholder="Leave type name"
                 />
               </div>

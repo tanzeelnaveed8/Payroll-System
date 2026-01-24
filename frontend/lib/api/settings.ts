@@ -102,9 +102,8 @@ export interface SettingsResponse {
   success: boolean;
   message: string;
   data: {
-    settings?: AllSettings;
+    settings?: AllSettings | CompanySettings | PayrollSettings | AttendanceRules | { leavePolicies: LeavePolicy[] };
     type?: SettingsType;
-    settings?: CompanySettings | PayrollSettings | AttendanceRules | { leavePolicies: LeavePolicy[] };
   };
 }
 

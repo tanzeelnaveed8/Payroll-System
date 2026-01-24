@@ -198,7 +198,7 @@ export default function DepartmentLeadTasksPage() {
           ) : (
             <div className="space-y-4">
               {tasks.map((task) => (
-                <Link key={task.id || task._id} href={`/department_lead/tasks/${task.id || task._id}`}>
+                <Link key={task.id} href={`/department_lead/tasks/${task.id}`}>
                   <Card className="border border-slate-200 bg-white hover:shadow-lg transition-all cursor-pointer">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between gap-4">

@@ -75,7 +75,14 @@ export default function ManagerSettingsPage() {
     setSuccess(null);
 
     try {
-      const updateData = {
+      const updateData: {
+        name?: string;
+        preferences?: {
+          emailNotifications?: boolean;
+          approvalNotifications?: boolean;
+          defaultPeriod?: string;
+        };
+      } = {
         name: name !== settings.profile.name ? name : undefined,
         preferences: {
           emailNotifications: emailNotifications !== settings.preferences.emailNotifications 

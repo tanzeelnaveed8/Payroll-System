@@ -385,7 +385,7 @@ export default function AdminTasksPage() {
                           <div className="mt-2">
                             <p className="text-xs font-medium text-[#0F172A] mb-1">Skills:</p>
                             <div className="flex flex-wrap gap-1">
-                              {selectedEmp.skills.map((skill, idx) => (
+                              {selectedEmp.skills.map((skill: string, idx: number) => (
                                 <span key={idx} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
                                   {skill}
                                 </span>
@@ -397,7 +397,7 @@ export default function AdminTasksPage() {
                           <div className="mt-2">
                             <p className="text-xs font-medium text-[#0F172A] mb-1">Fields:</p>
                             <div className="flex flex-wrap gap-1">
-                              {selectedEmp.fields.map((field, idx) => (
+                              {selectedEmp.fields.map((field: string, idx: number) => (
                                 <span key={idx} className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
                                   {field}
                                 </span>

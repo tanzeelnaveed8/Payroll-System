@@ -10,6 +10,10 @@ import {
 } from '@/lib/api/employee';
 import { usersApi, type User, type UserFilters } from '@/lib/api/users';
 
+// Employment types matching User interface from @/lib/api/users
+export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'intern';
+export type EmploymentStatus = 'active' | 'inactive' | 'on-leave' | 'terminated';
+
 const mapId = (obj: any): any => {
   if (!obj) return obj;
   if (Array.isArray(obj)) {
@@ -238,6 +242,7 @@ export const employeeService = {
 
 // Export types for admin employee management
 export type Employee = User;
+
 export type EmployeeFilter = {
   search?: string;
   department?: string;

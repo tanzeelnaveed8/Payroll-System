@@ -137,7 +137,7 @@ export default function ManagerTasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">Team Tasks Report</h1>
-          <p className="text-sm sm:text-base text-[#64748B]">Monitor and track your team's task progress</p>
+          <p className="text-sm sm:text-base text-[#64748B]">Monitor and track your team&apos;s task progress</p>
         </div>
       </div>
 

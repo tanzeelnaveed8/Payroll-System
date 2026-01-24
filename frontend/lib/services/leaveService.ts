@@ -1,7 +1,7 @@
 import { leaveApi, type LeaveRequest, type LeaveBalance } from '@/lib/api/leave';
 
 export type LeaveRequestStatus = 'pending' | 'approved' | 'rejected';
-export type LeaveType = 'paid' | 'unpaid' | 'sick' | 'annual' | 'casual' | 'maternity' | 'paternity';
+export type LeaveType = 'paid' | 'unpaid' | 'sick' | 'annual' | 'casual' | 'maternity' | 'paternity' | 'emergency';
 
 export type { LeaveRequest, LeaveBalance } from '@/lib/api/leave';
 
@@ -18,6 +18,9 @@ export interface LeaveRequestFilter {
   dateTo?: string;
   status?: LeaveRequestStatus;
 }
+
+// Alias for compatibility with components
+export type LeaveFilters = LeaveRequestFilter;
 
 export interface LeaveSort {
   field: string;

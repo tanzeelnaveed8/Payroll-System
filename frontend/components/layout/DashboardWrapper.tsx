@@ -99,7 +99,7 @@ export default function DashboardWrapper({
               </svg>
             </div>
             <h1 className="text-2xl font-bold text-[#0F172A] mb-2">Access Restricted</h1>
-            <p className="text-[#64748B] mb-1">You don't have permission to access this page</p>
+            <p className="text-[#64748B] mb-1">You don&apos;t have permission to access this page</p>
             <p className="text-sm text-[#64748B] mb-6">Your role: <span className="font-semibold text-[#2563EB] capitalize">{user.role}</span></p>
           </div>
           <button

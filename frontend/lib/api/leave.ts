@@ -173,7 +173,7 @@ export const leaveApi = {
   } = {}): Promise<LeaveRequestsResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== ('' as any)) {
         params.append(key, String(value));
       }
     });
@@ -252,7 +252,7 @@ export const leaveApi = {
   } = {}): Promise<LeaveBalancesResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== ('' as any)) {
         params.append(key, String(value));
       }
     });
@@ -293,7 +293,7 @@ export const leaveApi = {
   } = {}): Promise<LeaveRequestsResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (value !== undefined && value !== null && value !== ('' as any)) {
         params.append(key, String(value));
       }
     });

@@ -19,6 +19,11 @@ export interface TimesheetFilter {
   employeeId?: string;
 }
 
+export interface TimesheetSort {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
 export const timesheetService = {
   async getTimesheets(filters: TimesheetFilter = {}): Promise<Timesheet[]> {
     const response = await timesheetApi.getTimesheets(filters);

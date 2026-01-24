@@ -3,13 +3,13 @@
 import { useState } from "react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import type { TimeSheet, TimeSheetSort } from "@/lib/services/timesheetService";
+import type { Timesheet, TimesheetSort } from "@/lib/services/timesheetService";
 
 interface TimeSheetTableProps {
-  timeSheets: TimeSheet[];
+  timeSheets: Timesheet[];
   loading: boolean;
-  sort: TimeSheetSort;
-  onSort: (field: keyof TimeSheet) => void;
+  sort: TimesheetSort;
+  onSort: (field: keyof Timesheet) => void;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   selectedIds: string[];
@@ -40,13 +40,14 @@ export default function TimeSheetTable({
 }: TimeSheetTableProps) {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
-  const getStatusBadge = (status: TimeSheet["status"]) => {
-    const variants = {
-      pending: { className: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20", label: "Pending" },
+  const getStatusBadge = (status: Timesheet["status"]) => {
+    const variants: Record<Timesheet["status"], { className: string; label: string }> = {
+      draft: { className: "bg-slate-100 text-slate-700 border-slate-200", label: "Draft" },
+      submitted: { className: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20", label: "Submitted" },
       approved: { className: "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20", label: "Approved" },
       rejected: { className: "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20", label: "Rejected" },
     };
-    const variant = variants[status];
+    const variant = variants[status] || variants.draft;
     return (
       <Badge className={variant.className} variant="outline">
         {variant.label}
@@ -54,7 +55,7 @@ export default function TimeSheetTable({
     );
   };
 
-  const SortIcon = ({ field }: { field: keyof TimeSheet }) => {
+  const SortIcon = ({ field }: { field: keyof Timesheet }) => {
     if (sort.field !== field) {
       return (
         <svg className="w-4 h-4 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,7 +75,7 @@ export default function TimeSheetTable({
   };
 
   const totalPages = Math.ceil(total / pageSize);
-  const pendingCount = timeSheets.filter((ts) => ts.status === "pending").length;
+  const pendingCount = timeSheets.filter((ts) => ts.status === "submitted").length;
   const allPendingSelected = pendingCount > 0 && selectedIds.length === pendingCount;
 
   if (loading && timeSheets.length === 0) {
@@ -144,11 +145,11 @@ export default function TimeSheetTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-[#0F172A]">Clock-out</th>
               <th
                 className="px-4 py-3 text-left text-xs font-semibold text-[#0F172A] cursor-pointer hover:bg-slate-100"
-                onClick={() => onSort("totalHours")}
+                onClick={() => onSort("hours")}
               >
                 <div className="flex items-center gap-2">
                   Total Hours
-                  <SortIcon field="totalHours" />
+                  <SortIcon field="hours" />
                 </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-[#0F172A]">Overtime</th>
@@ -167,7 +168,7 @@ export default function TimeSheetTable({
           <tbody className="divide-y divide-slate-100">
             {timeSheets.map((timesheet) => {
               const isSelected = selectedIds.includes(timesheet.id);
-              const isPending = timesheet.status === "pending";
+              const isPending = timesheet.status === "submitted";
               const isLoading = actionLoading === timesheet.id;
 
               return (
@@ -199,10 +200,10 @@ export default function TimeSheetTable({
                   </td>
                   <td className="px-4 py-3 text-sm text-[#0F172A]">{timesheet.clockIn}</td>
                   <td className="px-4 py-3 text-sm text-[#0F172A]">{timesheet.clockOut}</td>
-                  <td className="px-4 py-3 text-sm font-semibold text-[#0F172A]">{timesheet.totalHours}h</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-[#0F172A]">{timesheet.hours}h</td>
                   <td className="px-4 py-3 text-sm text-[#0F172A]">
-                    {timesheet.overtime > 0 ? (
-                      <span className="text-[#F59E0B] font-semibold">+{timesheet.overtime}h</span>
+                    {(timesheet.overtimeHours || 0) > 0 ? (
+                      <span className="text-[#F59E0B] font-semibold">+{timesheet.overtimeHours}h</span>
                     ) : (
                       <span className="text-[#64748B]">-</span>
                     )}
@@ -243,7 +244,7 @@ export default function TimeSheetTable({
       <div className="lg:hidden divide-y divide-slate-100">
         {timeSheets.map((timesheet) => {
           const isSelected = selectedIds.includes(timesheet.id);
-          const isPending = timesheet.status === "pending";
+          const isPending = timesheet.status === "submitted";
           const isLoading = actionLoading === timesheet.id;
 
           return (
@@ -276,7 +277,7 @@ export default function TimeSheetTable({
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Total Hours</p>
-                  <p className="font-semibold text-[#0F172A]">{timesheet.totalHours}h</p>
+                  <p className="font-semibold text-[#0F172A]">{timesheet.hours}h</p>
                 </div>
                 <div>
                   <p className="text-xs text-[#64748B] mb-1">Clock-in</p>
@@ -286,10 +287,10 @@ export default function TimeSheetTable({
                   <p className="text-xs text-[#64748B] mb-1">Clock-out</p>
                   <p className="text-[#0F172A]">{timesheet.clockOut}</p>
                 </div>
-                {timesheet.overtime > 0 && (
+                {(timesheet.overtimeHours || 0) > 0 && (
                   <div>
                     <p className="text-xs text-[#64748B] mb-1">Overtime</p>
-                    <p className="text-[#F59E0B] font-semibold">+{timesheet.overtime}h</p>
+                    <p className="text-[#F59E0B] font-semibold">+{timesheet.overtimeHours}h</p>
                   </div>
                 )}
               </div>

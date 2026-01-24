@@ -9,7 +9,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'manager' | 'employee';
+  role: 'admin' | 'manager' | 'employee' | 'dept_lead';
   employeeId?: string;
   department?: string;
   position?: string;

@@ -20,10 +20,11 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/lib/hooks/useToast";
 
 const getStatusBadge = (status: ProjectStatus) => {
-  const styles = {
+  const styles: Record<ProjectStatus, string> = {
     draft: "bg-slate-100 text-slate-700 border-slate-200",
     connected: "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20",
     pending: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20",
+    archived: "bg-slate-100 text-slate-500 border-slate-200",
   };
   return styles[status];
 };

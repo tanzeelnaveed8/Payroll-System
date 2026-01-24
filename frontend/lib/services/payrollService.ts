@@ -63,15 +63,7 @@ export const payrollService = {
   },
 
   async getPaystubPDF(id: string): Promise<void> {
-    const blob = await payrollApi.getPaystubPDF(id);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `paystub-${id}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+    await payrollApi.getPaystubPDF(id);
   },
 
   async getEmployeePaystubs(employeeId: string): Promise<Paystub[]> {

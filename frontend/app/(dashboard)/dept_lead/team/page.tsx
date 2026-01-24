@@ -41,7 +41,7 @@ export default function DeptLeadTeamPage() {
 
   const handleEmployeeClick = async (employeeId: string) => {
     try {
-      const employee = await employeeService.getEmployeeById(employeeId);
+      const employee = await employeeService.getEmployee(employeeId);
       setSelectedEmployee(employee);
       setIsDrawerOpen(true);
     } catch (error: any) {
@@ -101,9 +101,9 @@ export default function DeptLeadTeamPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredEmployees.map((employee) => (
                 <Card
-                  key={employee.id || employee._id}
+                  key={employee.id}
                   className="border border-slate-200 bg-white hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => handleEmployeeClick(employee.id || employee._id || '')}
+                  onClick={() => handleEmployeeClick(employee.id || '')}
                 >
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">

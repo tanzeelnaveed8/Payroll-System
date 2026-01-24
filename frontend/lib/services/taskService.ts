@@ -60,6 +60,24 @@ export const taskService = {
     return response.data.task;
   },
 
+  async assignTask(data: {
+    employeeId: string;
+    title: string;
+    description?: string;
+    status?: TaskStatus;
+    priority: TaskPriority;
+    dueDate: string;
+  }): Promise<Task> {
+    // assignTask is an alias for createTask (status is ignored as it defaults to pending)
+    return this.createTask({
+      employeeId: data.employeeId,
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      dueDate: data.dueDate,
+    });
+  },
+
   async updateTask(id: string, data: Partial<Task>): Promise<Task> {
     const response = await taskApi.updateTask(id, data);
     return response.data.task;
@@ -105,5 +123,14 @@ export const taskService = {
       console.error("Failed to load upcoming tasks:", error);
       return [];
     }
+  },
+
+  // Wrapper methods for component compatibility
+  async getCurrentTasks(employeeId: string): Promise<Task[]> {
+    return this.getEmployeeCurrentTasks(employeeId);
+  },
+
+  async getUpcomingTasks(employeeId: string): Promise<Task[]> {
+    return this.getEmployeeUpcomingTasks(employeeId);
   },
 };
