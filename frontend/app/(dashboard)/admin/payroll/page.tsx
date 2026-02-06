@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
@@ -14,6 +14,7 @@ import {
   type PayrollFilter,
   type PayrollStatus,
 } from "@/lib/services/payrollService";
+import { X, Plus, DollarSign } from "lucide-react";
 
 export default function AdminPayrollPage() {
   const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
@@ -29,28 +30,28 @@ export default function AdminPayrollPage() {
   const [editingPeriod, setEditingPeriod] = useState<PayrollPeriod | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-    setLoading(true);
+      setLoading(true);
       const [periodsData, current, nextDate] = await Promise.all([
-      payrollService.getPayrollPeriods(filters),
+        payrollService.getPayrollPeriods(filters),
         payrollService.getCurrentPeriod().catch(() => null),
         payrollService.getNextPayrollDate().catch(() => ""),
       ]);
-        setPeriods(periodsData);
-        setCurrentPeriod(current);
-        setNextPayrollDate(nextDate);
+      setPeriods(periodsData);
+      setCurrentPeriod(current);
+      setNextPayrollDate(nextDate);
     } catch (error: any) {
       const errorMessage = error.message || 'Failed to load payroll data. Please refresh the page.';
       setNotification({ type: 'error', message: errorMessage });
     } finally {
-        setLoading(false);
-      }
-    };
+      setLoading(false);
+    }
+  }, [filters]);
 
   useEffect(() => {
     loadData();
-  }, [filters]);
+  }, [loadData]);
 
   const handleFilterChange = (field: keyof PayrollFilter, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value || undefined }));
@@ -167,7 +168,7 @@ export default function AdminPayrollPage() {
   ];
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       {notification && (
         <div
           className={`p-4 rounded-lg border ${
@@ -180,29 +181,29 @@ export default function AdminPayrollPage() {
           <button
             onClick={() => setNotification(null)}
             className="ml-4 text-current opacity-70 hover:opacity-100"
+            aria-label="Dismiss notification"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-5 h-5" />
           </button>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Payroll Management</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-1">Payroll Management</h1>
           <p className="text-sm sm:text-base text-[#64748B]">
-            Manage payroll periods and processing
+            Create payroll periods, process salaries, and track payment history
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           {!currentPeriod && (
             <Button
               variant="outline"
               size="default"
               onClick={() => setIsCreateModalOpen(true)}
-              className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+              className="w-full sm:w-auto border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5 flex items-center justify-center gap-2"
             >
+              <Plus className="w-4 h-4" />
               Create Period
             </Button>
           )}
@@ -211,8 +212,9 @@ export default function AdminPayrollPage() {
           size="default"
           onClick={handleProcessPayroll}
             disabled={processing || !currentPeriod}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
+            <DollarSign className="w-4 h-4" />
             {processing ? "Processing..." : "Process Payroll"}
         </Button>
         </div>

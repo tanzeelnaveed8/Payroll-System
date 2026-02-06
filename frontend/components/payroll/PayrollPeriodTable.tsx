@@ -74,12 +74,12 @@ export default function PayrollPeriodTable({ periods, onViewPeriod, onEditPeriod
                   </Badge>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => onViewPeriod?.(period)}
-                      className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+                      className="h-9 px-4 border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
                     >
                       View
                     </Button>
@@ -88,7 +88,7 @@ export default function PayrollPeriodTable({ periods, onViewPeriod, onEditPeriod
                         variant="outline"
                         size="sm"
                         onClick={() => onEditPeriod(period)}
-                        className="border-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/5"
+                        className="h-9 px-4 border-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/5"
                       >
                         Edit
                       </Button>
@@ -98,7 +98,7 @@ export default function PayrollPeriodTable({ periods, onViewPeriod, onEditPeriod
                         variant="outline"
                         size="sm"
                         onClick={() => onDownloadPeriod(period)}
-                        className="border-slate-200 text-[#64748B] hover:bg-slate-50"
+                        className="h-9 px-4 border-slate-200 text-[#64748B] hover:bg-slate-50"
                       >
                         Download
                       </Button>

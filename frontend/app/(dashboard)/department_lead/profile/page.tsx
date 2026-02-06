@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -8,6 +9,9 @@ import Input from "@/components/ui/Input";
 import { usersApi, User } from "@/lib/api/users";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { toast } from "@/lib/hooks/useToast";
+import { settingsService } from "@/lib/services/settingsService";
+import WorkingDaysDisplay from "@/components/settings/WorkingDaysDisplay";
+import { getProfileImageUrl } from "@/lib/utils/profileImage";
 
 export default function DepartmentLeadProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -23,11 +27,27 @@ export default function DepartmentLeadProfilePage() {
     address: "",
     bio: "",
   });
+  const [companySettings, setCompanySettings] = useState<{ timezone?: string; workingDays?: string[] } | null>(null);
   const { user: authUser } = useAuth();
 
   useEffect(() => {
     loadProfile();
+    loadCompanySettings();
   }, []);
+
+  const loadCompanySettings = async () => {
+    try {
+      const allSettings = await settingsService.getSettings();
+      if (allSettings.company) {
+        setCompanySettings({
+          timezone: allSettings.company.timezone,
+          workingDays: allSettings.company.workingDays,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load company settings:', error);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -37,11 +57,32 @@ export default function DepartmentLeadProfilePage() {
       if (response.success && response.data.user) {
         const userData = response.data.user;
         setProfile(userData);
+        // Handle address: can be string or object
+        let addressValue = "";
+        if (userData.address) {
+          if (typeof userData.address === 'string') {
+            addressValue = userData.address;
+          } else if (typeof userData.address === 'object' && userData.address.street) {
+            addressValue = userData.address.street || "";
+            if (userData.address.city) {
+              addressValue += (addressValue ? ", " : "") + userData.address.city;
+            }
+            if (userData.address.state) {
+              addressValue += (addressValue ? ", " : "") + userData.address.state;
+            }
+            if (userData.address.zipCode) {
+              addressValue += (addressValue ? " " : "") + userData.address.zipCode;
+            }
+            if (userData.address.country) {
+              addressValue += (addressValue ? ", " : "") + userData.address.country;
+            }
+          }
+        }
         setFormData({
           name: userData.name || "",
           phone: userData.phone || "",
-          address: (userData as any).address || "",
-          bio: (userData as any).bio || "",
+          address: addressValue,
+          bio: userData.bio || "",
         });
       }
     } catch (err: any) {
@@ -74,11 +115,32 @@ export default function DepartmentLeadProfilePage() {
 
   const handleCancel = () => {
     if (profile) {
+      // Handle address: can be string or object
+      let addressValue = "";
+      if (profile.address) {
+        if (typeof profile.address === 'string') {
+          addressValue = profile.address;
+        } else if (typeof profile.address === 'object' && profile.address.street) {
+          addressValue = profile.address.street || "";
+          if (profile.address.city) {
+            addressValue += (addressValue ? ", " : "") + profile.address.city;
+          }
+          if (profile.address.state) {
+            addressValue += (addressValue ? ", " : "") + profile.address.state;
+          }
+          if (profile.address.zipCode) {
+            addressValue += (addressValue ? " " : "") + profile.address.zipCode;
+          }
+          if (profile.address.country) {
+            addressValue += (addressValue ? ", " : "") + profile.address.country;
+          }
+        }
+      }
       setFormData({
         name: profile.name || "",
         phone: profile.phone || "",
-        address: (profile as any).address || "",
-        bio: (profile as any).bio || "",
+        address: addressValue,
+        bio: profile.bio || "",
       });
     }
     setIsEditing(false);
@@ -132,7 +194,7 @@ export default function DepartmentLeadProfilePage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">My Profile</h1>
@@ -166,25 +228,29 @@ export default function DepartmentLeadProfilePage() {
             <CardContent className="p-6">
               <div className="flex flex-col items-center">
                 <div className="relative mb-6">
-                  <div className="h-48 w-48 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 flex items-center justify-center shadow-xl ring-4 ring-blue-100">
+                  <div className="relative h-48 w-48 rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 flex items-center justify-center shadow-xl ring-4 ring-blue-100 overflow-hidden">
                     {profile.photo ? (
-                      <img
+                      <Image
                         key={profile.photo}
-                        src={profile.photo.startsWith('http') 
-                          ? profile.photo 
-                          : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}${profile.photo}`}
+                        src={getProfileImageUrl(profile.photo)}
                         alt={profile.name}
-                        className="h-full w-full rounded-2xl object-cover"
+                        fill
+                        sizes="192px"
+                        className="rounded-2xl object-cover"
                         onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          const span = e.currentTarget.nextElementSibling as HTMLElement;
-                          if (span) span.style.display = 'block';
+                          const target = e.currentTarget;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const fallback = parent.querySelector('.avatar-fallback') as HTMLElement;
+                            if (fallback) fallback.style.display = 'flex';
+                          }
                         }}
                       />
                     ) : null}
-                    {!profile.photo && (
+                    <div className={`avatar-fallback h-full w-full flex items-center justify-center ${profile.photo ? 'hidden' : ''}`}>
                       <span className="text-6xl font-bold text-white">{getInitials(profile.name)}</span>
-                    )}
+                    </div>
                   </div>
                   <label className={`absolute bottom-0 right-0 h-12 w-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg transition-all ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-blue-700'}`}>
                     {uploading ? (
@@ -341,6 +407,13 @@ export default function DepartmentLeadProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {companySettings && (
+            <WorkingDaysDisplay
+              timezone={companySettings.timezone}
+              workingDays={companySettings.workingDays}
+            />
+          )}
 
           <Card className="border border-slate-200 bg-white shadow-sm">
             <CardHeader className="border-b border-slate-200">

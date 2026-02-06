@@ -28,6 +28,16 @@ const statusOptions = [
   { value: "terminated", label: "Terminated" },
 ];
 
+const formatRoleLabel = (role: string): string => {
+  const roleMap: Record<string, string> = {
+    'admin': 'Administrator',
+    'manager': 'Manager',
+    'employee': 'Employee',
+    'dept_lead': 'Department Lead',
+  };
+  return roleMap[role] || role.charAt(0).toUpperCase() + role.slice(1).replace(/_/g, ' ');
+};
+
 export default function EmployeeFilters({ filters, onFilterChange }: EmployeeFiltersProps) {
   const [localFilters, setLocalFilters] = useState(filters);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -86,7 +96,7 @@ export default function EmployeeFilters({ filters, onFilterChange }: EmployeeFil
             <option value="">All Roles</option>
             {roles.map((role) => (
               <option key={role} value={role}>
-                {role}
+                {formatRoleLabel(role)}
               </option>
             ))}
           </Select>

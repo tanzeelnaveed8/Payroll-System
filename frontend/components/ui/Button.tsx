@@ -7,11 +7,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
+  ({ className, variant = "default", size = "default", "aria-label": ariaLabel, children, ...props }, ref) => {
+    // Ensure button has accessible label (either aria-label or children)
+    const accessibleLabel = ariaLabel || (typeof children === "string" ? children : undefined);
+    
     return (
       <button
         className={cn(
-          "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none transform hover:scale-[1.02] active:scale-[0.98]",
+          "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none transform hover:scale-[1.02] active:scale-[0.98]",
           {
             "gradient-primary text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40":
               variant === "gradient",
@@ -29,8 +32,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           className
         )}
         ref={ref}
+        aria-label={accessibleLabel}
         {...props}
-      />
+      >
+        {children}
+      </button>
     );
   }
 );

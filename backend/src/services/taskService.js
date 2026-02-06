@@ -25,23 +25,40 @@ export const assignTask = async (taskData, assignedBy) => {
 
   await task.save();
 
-  await Notification.create({
-    userId: taskData.employeeId,
-    type: 'task_assigned',
-    title: 'New Task Assigned',
-    message: `${assigner.name} assigned you a task: ${taskData.title}`,
-    relatedEntityType: 'task',
-    relatedEntityId: task._id,
-    priority: taskData.priority === 'urgent' || taskData.priority === 'high' ? 'high' : 'medium',
-    actionUrl: `/employee/tasks/${task._id}`,
-    actionLabel: 'View Task'
-  });
+  // Create notification for the assigned user (dept_lead or employee)
+  // Determine action URL based on assignee role
+  try {
+    const assignee = await User.findById(taskData.employeeId).select('role').lean();
+    let actionUrl = `/employee/tasks/${task._id}`;
+    
+    if (assignee?.role === 'dept_lead') {
+      actionUrl = `/dept_lead/tasks/${task._id}`;
+    } else if (assignee?.role === 'employee') {
+      actionUrl = `/employee/tasks/${task._id}`;
+    }
+
+    await Notification.create({
+      userId: taskData.employeeId,
+      type: 'task_assigned',
+      title: 'New Task Assigned',
+      message: `${assigner.name} assigned you a task: ${taskData.title}`,
+      relatedEntityType: 'task',
+      relatedEntityId: task._id,
+      priority: taskData.priority === 'urgent' || taskData.priority === 'high' ? 'high' : 'medium',
+      actionUrl: actionUrl,
+      actionLabel: 'View Task'
+    });
+    console.log(`[assignTask] Notification created for task ${task._id} assigned to user ${taskData.employeeId}`);
+  } catch (notificationError) {
+    // Log error but don't fail the task assignment
+    console.error(`[assignTask] Failed to create notification for task ${task._id}:`, notificationError);
+  }
 
   return task;
 };
 
 export const updateTaskStatus = async (taskId, newStatus, userId) => {
-  const task = await Task.findById(taskId).populate('employeeId assignedBy');
+  const task = await Task.findById(taskId).populate('employeeId', 'name email').populate('assignedBy', 'name email');
   if (!task) {
     throw new ResourceNotFoundError('Task');
   }
@@ -77,20 +94,41 @@ export const updateTaskStatus = async (taskId, newStatus, userId) => {
 
   if (oldStatus !== newStatus) {
     const assigner = task.assignedBy;
+    const employee = task.employeeId;
+    
     if (assigner && assigner._id.toString() !== userId.toString()) {
-      // Use 'task_completed' if status changed to completed, otherwise use 'performance_update'
+      // Determine notification type and message based on status
       const notificationType = newStatus === 'completed' ? 'task_completed' : 'performance_update';
-      await Notification.create({
-        userId: assigner._id,
-        type: notificationType,
-        title: 'Task Status Updated',
-        message: `${task.employeeId.name} updated task "${task.title}" from ${oldStatus} to ${newStatus}`,
-        relatedEntityType: 'task',
-        relatedEntityId: task._id,
-        priority: 'low',
-        actionUrl: `/admin/tasks/${task._id}`,
-        actionLabel: 'View Task'
-      });
+      const statusMessage = newStatus === 'completed' 
+        ? `completed task "${task.title}"`
+        : `updated task "${task.title}" from ${oldStatus} to ${newStatus}`;
+      
+      // Determine action URL based on assigner role
+      let actionUrl = `/admin/tasks/${task._id}`;
+      const assignerUser = await User.findById(assigner._id).select('role').lean();
+      if (assignerUser?.role === 'manager') {
+        actionUrl = `/manager/tasks/${task._id}`;
+      } else if (assignerUser?.role === 'dept_lead') {
+        actionUrl = `/dept_lead/tasks/${task._id}`;
+      }
+      
+      try {
+        await Notification.create({
+          userId: assigner._id,
+          type: notificationType,
+          title: newStatus === 'completed' ? 'Task Completed' : 'Task Status Updated',
+          message: `${employee.name} ${statusMessage}`,
+          relatedEntityType: 'task',
+          relatedEntityId: task._id,
+          priority: newStatus === 'completed' ? 'medium' : 'low',
+          actionUrl: actionUrl,
+          actionLabel: 'View Task'
+        });
+        console.log(`[updateTaskStatus] Notification created for task ${task._id} status update to ${newStatus}`);
+      } catch (notificationError) {
+        // Log error but don't fail the status update
+        console.error(`[updateTaskStatus] Failed to create notification for task ${task._id}:`, notificationError);
+      }
     }
   }
 

@@ -218,7 +218,7 @@ export default function ManagerReportsPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Team Reports</h1>
@@ -253,7 +253,7 @@ export default function ManagerReportsPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded-lg font-semibold">
           {error}
         </div>
       )}
@@ -261,33 +261,36 @@ export default function ManagerReportsPage() {
       {activeTab === "quick" ? (
         <>
           {/* Quick Reports Filters */}
-          <Card className="border border-slate-200 bg-white">
-            <CardHeader className="pb-4">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 pb-4">
               <CardTitle className="text-lg font-bold text-[#0F172A]">Report Filters</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="bg-white">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date From</label>
+                  <label className="text-sm font-semibold text-[#0F172A]">Date From</label>
                   <Input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date To</label>
+                  <label className="text-sm font-semibold text-[#0F172A]">Date To</label>
                   <Input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Department</label>
+                  <label className="text-sm font-semibold text-[#0F172A]">Department</label>
                   <Select
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
                   >
                     <option value="">All Departments</option>
                     {departments.map((dept) => (
@@ -408,7 +411,7 @@ export default function ManagerReportsPage() {
       ) : (
         <>
           {/* Generate Report Form */}
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-bold text-[#0F172A]">Generate New Report</CardTitle>
             </CardHeader>
@@ -467,7 +470,7 @@ export default function ManagerReportsPage() {
           </Card>
 
           {/* Filters */}
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-bold text-[#0F172A]">Filters</CardTitle>
             </CardHeader>
@@ -513,14 +516,14 @@ export default function ManagerReportsPage() {
               <span className="ml-3 text-[#64748B]">Loading reports...</span>
             </div>
           ) : reports.length === 0 ? (
-            <Card className="border border-slate-200 bg-white">
+            <Card className="border-2 border-slate-300 bg-white shadow-sm">
               <CardContent className="py-12 text-center text-[#64748B]">
                 No reports found. Generate a new report to get started.
               </CardContent>
             </Card>
           ) : (
             <>
-              <Card className="border border-slate-200 bg-white">
+              <Card className="border-2 border-slate-300 bg-white shadow-sm">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-bold text-[#0F172A]">
                     My Generated Reports ({pagination.total})

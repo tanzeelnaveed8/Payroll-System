@@ -80,7 +80,7 @@ export default function DepartmentLeadTeamPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -94,7 +94,7 @@ export default function DepartmentLeadTeamPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Department Team</h1>
@@ -178,8 +178,8 @@ export default function DepartmentLeadTeamPage() {
             </div>
           )}
           {total > pageSize && (
-            <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-200">
-              <p className="text-sm text-[#64748B]">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 pt-4 border-t border-slate-200">
+              <p className="text-xs sm:text-sm text-[#64748B]">
                 Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} of {total}
               </p>
               <div className="flex gap-2">
@@ -188,6 +188,11 @@ export default function DepartmentLeadTeamPage() {
                   size="sm"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1 || loading}
+                  className={`${
+                    page === 1 || loading
+                      ? "border-slate-200 text-slate-400 cursor-not-allowed bg-slate-50"
+                      : "border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white bg-white shadow-sm hover:shadow-md active:bg-[#1D4ED8] active:border-[#1D4ED8]"
+                  } font-semibold px-4 sm:px-6 h-9 sm:h-10 text-xs sm:text-sm transition-all`}
                 >
                   Previous
                 </Button>
@@ -196,6 +201,11 @@ export default function DepartmentLeadTeamPage() {
                   size="sm"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page * pageSize >= total || loading}
+                  className={`${
+                    page * pageSize >= total || loading
+                      ? "border-slate-200 text-slate-400 cursor-not-allowed bg-slate-50"
+                      : "border-2 border-[#2563EB] text-[#2563EB] hover:bg-[#2563EB] hover:text-white bg-white shadow-sm hover:shadow-md active:bg-[#1D4ED8] active:border-[#1D4ED8]"
+                  } font-semibold px-4 sm:px-6 h-9 sm:h-10 text-xs sm:text-sm transition-all`}
                 >
                   Next
                 </Button>

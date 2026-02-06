@@ -36,8 +36,8 @@ const SimpleLineChart = ({ data }: { data: { labels: string[]; values: number[] 
   });
 
   return (
-    <div className="w-full h-48 bg-slate-50 rounded-lg p-4">
-      <svg viewBox="0 0 100 100" className="w-full h-full" preserveAspectRatio="none">
+    <div className="w-full h-48 bg-slate-50 rounded-lg p-3 sm:p-4 flex flex-col justify-between">
+      <svg viewBox="0 0 100 100" className="w-full flex-1" preserveAspectRatio="none">
         <polyline
           fill="none"
           stroke="#2563EB"
@@ -58,9 +58,11 @@ const SimpleLineChart = ({ data }: { data: { labels: string[]; values: number[] 
           );
         })}
       </svg>
-      <div className="flex justify-between text-xs text-[#64748B] mt-2">
+      <div className="flex justify-between text-[10px] sm:text-xs text-[#64748B] mt-2">
         {data.labels.map((label, idx) => (
-          <span key={idx}>{label}</span>
+          <span key={idx} className="truncate max-w-[40px] text-center">
+            {label}
+          </span>
         ))}
       </div>
     </div>
@@ -71,8 +73,8 @@ const SimpleBarChart = ({ data }: { data: { labels: string[]; values: number[] }
   const maxValue = Math.max(...data.values, 1);
 
   return (
-    <div className="w-full h-48 bg-slate-50 rounded-lg p-4">
-      <div className="flex items-end justify-between h-full gap-2">
+    <div className="w-full h-48 bg-slate-50 rounded-lg p-3 sm:p-4 flex flex-col justify-between">
+      <div className="flex items-end justify-between flex-1 gap-1 sm:gap-2">
         {data.values.map((value, index) => {
           const height = (value / maxValue) * 100;
           return (
@@ -80,7 +82,9 @@ const SimpleBarChart = ({ data }: { data: { labels: string[]; values: number[] }
               <div className="w-full bg-slate-200 rounded-t relative" style={{ height: `${height}%` }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-[#2563EB] to-[#3B82F6] rounded-t"></div>
               </div>
-              <span className="text-xs text-[#64748B]">{data.labels[index]}</span>
+              <span className="text-[10px] sm:text-xs text-[#64748B] text-center">
+                {data.labels[index]}
+              </span>
             </div>
           );
         })}

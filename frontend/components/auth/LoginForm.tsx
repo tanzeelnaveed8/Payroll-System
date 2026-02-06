@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -63,22 +64,26 @@ export default function LoginForm({ onFlip }: LoginFormProps = {}) {
 
   return (
     <Card className="w-full h-full glass-effect">
-      <CardHeader>
-        <div className="flex flex-col items-center space-y-4">
-          <div className="h-40 w-40 flex items-center justify-center">
-            <img 
+      <CardHeader className="px-4 sm:px-6 pb-4 sm:pb-6">
+        <div className="flex flex-col items-center space-y-3 sm:space-y-4">
+          <div className="h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 flex items-center justify-center flex-shrink-0">
+            <Image 
               src="/payroll logo.png" 
               alt="MeeTech Labs Management system Logo" 
+              width={160}
+              height={160}
               className="w-full h-full object-contain drop-shadow-lg"
             />
           </div>
-          <CardTitle className="text-3xl font-bold text-[#0F172A]">Welcome Back</CardTitle>
-          <p className="text-sm text-[#64748B]">
+          <CardTitle className="text-xl sm:text-2xl md:text-3xl font-bold text-[#0F172A] text-center px-2">
+            Welcome Back
+          </CardTitle>
+          <p className="text-xs sm:text-sm text-[#64748B] text-center px-2 sm:px-4 leading-relaxed">
             Sign in with your credentials provided by administrator
           </p>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4 sm:px-6">
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/20">
             <p className="text-sm text-[#DC2626]">{error}</p>

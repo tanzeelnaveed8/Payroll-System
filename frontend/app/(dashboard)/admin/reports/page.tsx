@@ -235,7 +235,7 @@ export default function AdminReportsPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Reports</h1>
@@ -283,32 +283,37 @@ export default function AdminReportsPage() {
               <CardTitle className="text-lg font-bold text-[#0F172A]">Report Filters</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date From</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Date From</label>
                   <Input
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full min-w-0"
+                    max={dateTo}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date To</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Date To</label>
                   <Input
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
+                    min={dateFrom}
+                    className="w-full min-w-0"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Department</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Department</label>
                   <Select
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
+                    className="w-full min-w-0"
                   >
                     <option value="">All Departments</option>
                     {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
+                      <option key={dept.id} value={dept.id} title={dept.name}>
                         {dept.name}
                       </option>
                     ))}
@@ -432,11 +437,12 @@ export default function AdminReportsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Report Type</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Report Type</label>
                   <Select
                     value={generateForm.type}
                     onChange={(e) => setGenerateForm({ ...generateForm, type: e.target.value as ReportType })}
+                    className="w-full min-w-0"
                   >
                     <option value="payroll">Payroll</option>
                     <option value="attendance">Attendance</option>
@@ -446,44 +452,55 @@ export default function AdminReportsPage() {
                     <option value="financial">Financial</option>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date From</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">
+                    Date From <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     type="date"
                     value={generateForm.dateFrom}
                     onChange={(e) => setGenerateForm({ ...generateForm, dateFrom: e.target.value })}
+                    className="w-full min-w-0"
+                    required
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date To</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">
+                    Date To <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     type="date"
                     value={generateForm.dateTo}
                     onChange={(e) => setGenerateForm({ ...generateForm, dateTo: e.target.value })}
+                    min={generateForm.dateFrom}
+                    className="w-full min-w-0"
+                    required
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Department (Optional)</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Department (Optional)</label>
                   <Select
                     value={generateForm.departmentId}
                     onChange={(e) => setGenerateForm({ ...generateForm, departmentId: e.target.value })}
+                    className="w-full min-w-0"
                   >
                     <option value="">All Departments</option>
                     {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
+                      <option key={dept.id} value={dept.id} title={dept.name}>
                         {dept.name}
                       </option>
                     ))}
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Expires In (Days)</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Expires In (Days)</label>
                   <Input
                     type="number"
                     min="1"
                     max="365"
                     value={generateForm.expiresInDays}
                     onChange={(e) => setGenerateForm({ ...generateForm, expiresInDays: parseInt(e.target.value) || 30 })}
+                    className="w-full min-w-0"
                   />
                 </div>
                 <div className="flex items-end">
@@ -506,12 +523,13 @@ export default function AdminReportsPage() {
               <CardTitle className="text-lg font-bold text-[#0F172A]">Filters</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Type</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Type</label>
                   <Select
                     value={filters.type}
                     onChange={(e) => setFilters({ ...filters, type: e.target.value as ReportType | "" })}
+                    className="w-full min-w-0"
                   >
                     <option value="">All Types</option>
                     <option value="payroll">Payroll</option>
@@ -522,31 +540,36 @@ export default function AdminReportsPage() {
                     <option value="financial">Financial</option>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date From</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Date From</label>
                   <Input
                     type="date"
                     value={filters.dateFrom}
                     onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                    className="w-full min-w-0"
+                    min={filters.dateTo ? undefined : undefined}
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Date To</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Date To</label>
                   <Input
                     type="date"
                     value={filters.dateTo}
                     onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                    min={filters.dateFrom}
+                    className="w-full min-w-0"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-[#0F172A]">Department</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-[#0F172A] block">Department</label>
                   <Select
                     value={filters.departmentId}
                     onChange={(e) => setFilters({ ...filters, departmentId: e.target.value })}
+                    className="w-full min-w-0"
                   >
                     <option value="">All Departments</option>
                     {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>
+                      <option key={dept.id} value={dept.id} title={dept.name}>
                         {dept.name}
                       </option>
                     ))}

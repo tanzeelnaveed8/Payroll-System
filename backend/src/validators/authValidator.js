@@ -28,7 +28,7 @@ export const validateRegister = [
     .custom(async (value) => {
       const user = await User.findOne({ email: value });
       if (user) {
-        throw new Error('An account with this email address already exists');
+        throw new Error('This email address is already registered. Please use a different email address.');
       }
     }),
   body('password')
@@ -47,8 +47,8 @@ export const validateRegister = [
   body('role')
     .notEmpty()
     .withMessage('Role is required')
-    .isIn(['admin', 'manager', 'employee'])
-    .withMessage('Please select a valid role (Administrator, Manager, or Employee)'),
+    .isIn(['admin', 'manager', 'employee', 'dept_lead'])
+    .withMessage('Please select a valid role (Administrator, Manager, Employee, or Department Lead)'),
   body('employeeId')
     .optional()
     .trim()
@@ -56,7 +56,7 @@ export const validateRegister = [
       if (value) {
         const user = await User.findOne({ employeeId: value });
         if (user) {
-          throw new Error('An account with this employee ID already exists');
+          throw new Error('This employee ID is already in use. Please use a different employee ID.');
         }
       }
     }),

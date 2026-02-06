@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import { Wallet, Download, FileText, Eye, Receipt } from "lucide-react";
 import { employeeService, type Paystub } from "@/lib/services/employeeService";
 import { payrollService } from "@/lib/services/payrollService";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -48,7 +49,7 @@ export default function EmployeePaystubsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 gap-4">
@@ -62,7 +63,7 @@ export default function EmployeePaystubsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Pay Stubs</h1>
         <p className="text-sm sm:text-base text-[#64748B]">
@@ -71,7 +72,7 @@ export default function EmployeePaystubsPage() {
       </div>
 
       {paystubs.length === 0 ? (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="py-12">
             <div className="text-center text-[#64748B]">
               <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,13 +87,13 @@ export default function EmployeePaystubsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             {paystubs.map((stub) => (
               <Card
                 key={stub.id}
-                className={`border border-slate-200 bg-white hover:shadow-lg transition-all cursor-pointer ${
-                  selectedStub === stub.id ? "ring-2 ring-[#2563EB]" : ""
+                className={`border-2 border-slate-300 bg-white hover:shadow-xl transition-all cursor-pointer shadow-sm ${
+                  selectedStub === stub.id ? "ring-2 ring-[#2563EB] border-[#2563EB]" : ""
                 }`}
                 onClick={() => setSelectedStub(selectedStub === stub.id ? null : stub.id)}
               >
@@ -106,8 +107,8 @@ export default function EmployeePaystubsPage() {
                         <Badge
                           className={
                             stub.status === "paid"
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
-                              : "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
+                              ? "bg-[#16A34A]/10 text-[#16A34A] border-2 border-[#16A34A]/30 font-semibold"
+                              : "bg-[#F59E0B]/10 text-[#F59E0B] border-2 border-[#F59E0B]/30 font-semibold"
                           }
                         >
                           {stub.status === "paid" ? "Paid" : "Processing"}
@@ -162,7 +163,7 @@ export default function EmployeePaystubsPage() {
 
           {selectedPaystub && (
             <div className="lg:col-span-1">
-              <Card className="border border-slate-200 bg-white sticky top-6">
+              <Card className="border-2 border-slate-300 bg-white sticky top-6 shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg font-bold text-[#0F172A]">Pay Stub Details</CardTitle>
                 </CardHeader>

@@ -9,12 +9,16 @@ import EmployeeTable from "@/components/employees/EmployeeTable";
 import EmployeeFilters from "@/components/employees/EmployeeFilters";
 import EmployeeDetailDrawer from "@/components/employees/EmployeeDetailDrawer";
 import AddEmployeeModal from "@/components/employees/AddEmployeeModal";
+import EditEmployeeModal from "@/components/employees/EditEmployeeModal";
+import DeleteEmployeeModal from "@/components/employees/DeleteEmployeeModal";
 import {
   employeeService,
   type Employee,
   type EmployeeFilter,
   type EmployeeSort,
 } from "@/lib/services/employeeService";
+import { toast } from "@/lib/hooks/useToast";
+import { UserPlus } from "lucide-react";
 
 export default function AdminEmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -28,6 +32,10 @@ export default function AdminEmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,26 +99,55 @@ export default function AdminEmployeesPage() {
     }
   };
 
+  const handleDeleteEmployee = (employee: Employee) => {
+    if (employee.status === "active") {
+      toast.error("Cannot delete active employee. Please deactivate the employee first.");
+      return;
+    }
+    setDeletingEmployee(employee);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteSuccess = async () => {
+    toast.success(`Employee "${deletingEmployee?.name}" has been permanently deleted.`);
+    setDeletingEmployee(null);
+    setIsDeleteModalOpen(false);
+    
+    // Reload employees list
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await employeeService.getEmployees(filters, sort, pagination);
+      setEmployees(data.items);
+      setTotal(data.total);
+    } catch (err) {
+      setError("Failed to reload employees.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Employees</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-1">Employee Directory</h1>
           <p className="text-sm sm:text-base text-[#64748B]">
-            Manage employee directory and lifecycle
+            View, add, and manage all employees across your organization
           </p>
         </div>
         <Button
           variant="gradient"
           size="default"
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+          className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center gap-2"
         >
-          + Add Employee
+          <UserPlus className="w-4 h-4" />
+          Add Employee
         </Button>
       </div>
 
-      <Card className="border border-slate-200 bg-white">
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-bold text-[#0F172A]">Filters</CardTitle>
         </CardHeader>
@@ -119,7 +156,7 @@ export default function AdminEmployeesPage() {
         </CardContent>
       </Card>
 
-      <Card className="border border-slate-200 bg-white">
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-bold text-[#0F172A]">All Employees</CardTitle>
         </CardHeader>
@@ -145,6 +182,7 @@ export default function AdminEmployeesPage() {
               pagination={{ ...pagination, total }}
               onPageChange={handlePageChange}
               onViewEmployee={handleViewEmployee}
+              onDeleteEmployee={handleDeleteEmployee}
             />
           )}
         </CardContent>
@@ -157,6 +195,11 @@ export default function AdminEmployeesPage() {
           onClose={() => {
             setIsDrawerOpen(false);
             setSelectedEmployee(null);
+          }}
+          onEdit={(emp) => {
+            setIsDrawerOpen(false);
+            setEditingEmployee(emp);
+            setIsEditModalOpen(true);
           }}
         />
       )}
@@ -179,6 +222,33 @@ export default function AdminEmployeesPage() {
           };
           loadData();
         }}
+      />
+
+      {editingEmployee && (
+        <EditEmployeeModal
+          isOpen={isEditModalOpen}
+          employee={editingEmployee}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingEmployee(null);
+          }}
+          onSuccess={(updated) => {
+            setEmployees((prev) =>
+              prev.map((emp) => (emp.id === updated.id ? updated : emp))
+            );
+            setSelectedEmployee(updated);
+          }}
+        />
+      )}
+
+      <DeleteEmployeeModal
+        isOpen={isDeleteModalOpen}
+        employee={deletingEmployee}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeletingEmployee(null);
+        }}
+        onSuccess={handleDeleteSuccess}
       />
     </div>
   );

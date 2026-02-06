@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
 import connectDB from './config/database.js';
@@ -25,6 +26,8 @@ import deptLeadRoutes from './routes/deptLeadRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import fileRoutes from './routes/fileRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import dailyReportRoutes from './routes/dailyReportRoutes.js';
+import progressUpdateRoutes from './routes/progressUpdateRoutes.js';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorMiddleware.js';
 import { apiLimiter, authLimiter, uploadLimiter } from './middleware/rateLimiter.js';
 import { sanitizeMongo, sanitizeXSS, sanitizeInput, validateObjectId } from './middleware/sanitize.js';
@@ -68,6 +71,34 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-enc
 // Rate limiting (apply after body parsing)
 // Note: Auth routes have their own rate limiter, so they're excluded from general API limiter
 app.use('/api', apiLimiter); // General API rate limiting (excludes /api/auth routes)
+
+// Middleware to handle missing profile images gracefully (prevent 404 errors in logs)
+app.use('/uploads/profiles', (req, res, next) => {
+  // Only handle GET requests for image files
+  if (req.method !== 'GET') {
+    return next();
+  }
+
+  // Extract filename from query string if present (cache busting)
+  const requestedPath = req.path.split('?')[0];
+  const filePath = path.join(__dirname, '../uploads/profiles', path.basename(requestedPath));
+
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    // Return a 404 but mark it as handled to prevent error logging
+    // The frontend should handle missing images with a default placeholder
+    // Set a custom header to indicate this is an expected 404 (not an error)
+    res.set('X-Missing-File', 'true');
+    return res.status(404).json({ 
+      status: 'error',
+      message: 'Profile image not found',
+      code: 'IMAGE_NOT_FOUND'
+    });
+  }
+
+  // File exists, let express.static handle it
+  next();
+});
 
 // Serve static files from uploads directory with proper headers
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
@@ -159,6 +190,8 @@ app.get('/api', (req, res) => {
       manager: '/api/manager',
       employee: '/api/employee',
       admin: '/api/admin',
+      dailyReports: '/api/daily-reports',
+      progressUpdates: '/api/progress-updates',
       notifications: '/api/notifications',
       files: '/api/files',
       api: '/api',
@@ -181,6 +214,8 @@ app.use('/api/manager', managerRoutes);
 app.use('/api/employee', employeeRoutes);
 app.use('/api/dept_lead', deptLeadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/daily-reports', dailyReportRoutes);
+app.use('/api/progress-updates', progressUpdateRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/files', fileRoutes);
 
@@ -188,8 +223,15 @@ app.use('/api/files', fileRoutes);
 const uploadsPath = path.join(process.cwd(), 'uploads');
 app.use('/api/files/uploads', express.static(uploadsPath));
 
-// 404 handler (must be after all routes)
-app.use(notFoundHandler);
+// Test route for roles
+app.get('/api/test-roles', async (req, res) => {
+  try {
+    const roles = ['admin', 'manager', 'dept_lead', 'employee'];
+    res.json({ success: true, roles });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 // Global error handler (must be last)
 app.use(globalErrorHandler);
@@ -197,13 +239,49 @@ app.use(globalErrorHandler);
 // Start server
 const PORT = process.env.PORT || 5000;
 
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+  
+  const server = global.server;
+  
+  if (server) {
+    // Close server
+    server.close(() => {
+      console.log('HTTP server closed.');
+      
+      // Close MongoDB connection
+      mongoose.connection.close(false, () => {
+        console.log('MongoDB connection closed.');
+        process.exit(0);
+      });
+    });
+    
+    // Force close after 10 seconds
+    setTimeout(() => {
+      console.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  } else {
+    // Server not started yet, just close DB and exit
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed.');
+      process.exit(0);
+    });
+  }
+};
+
+// Listen for termination signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
 
     // Start Express server
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`\n╔════════════════════════════════════════════════════════╗`);
       console.log(`║      🚀 MeeTech Labs Management system API Server Started           ║`);
       console.log(`╠════════════════════════════════════════════════════════╣`);

@@ -103,7 +103,7 @@ export default function EmployeeTimesheetDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="h-64 bg-slate-200 rounded"></div>
@@ -114,8 +114,8 @@ export default function EmployeeTimesheetDetailPage() {
 
   if (error || !timesheet) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
-        <Card className="border border-slate-200 bg-white">
+      <div className="space-y-6 p-4 sm:p-6">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="py-12">
             <div className="text-center">
               <div className="mb-4">
@@ -151,7 +151,7 @@ export default function EmployeeTimesheetDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -183,7 +183,7 @@ export default function EmployeeTimesheetDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Details */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Timesheet Information</CardTitle>
             </CardHeader>
@@ -250,7 +250,7 @@ export default function EmployeeTimesheetDetailPage() {
 
           {/* Comments Section */}
           {timesheet.comments && (
-            <Card className="border border-slate-200 bg-white">
+            <Card className="border-2 border-slate-300 bg-white shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-[#0F172A]">
                   {timesheet.status === 'rejected' ? 'Rejection Reason' : 'Comments'}
@@ -268,7 +268,7 @@ export default function EmployeeTimesheetDetailPage() {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">
           {/* Timeline */}
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Timeline</CardTitle>
             </CardHeader>
@@ -349,7 +349,7 @@ export default function EmployeeTimesheetDetailPage() {
           </Card>
 
           {/* Actions */}
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Actions</CardTitle>
             </CardHeader>

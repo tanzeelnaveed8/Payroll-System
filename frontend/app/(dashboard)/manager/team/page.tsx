@@ -49,7 +49,7 @@ export default function ManagerTeamPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -63,7 +63,7 @@ export default function ManagerTeamPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">My Team</h1>
         <p className="text-sm sm:text-base text-[#64748B]">
@@ -72,7 +72,7 @@ export default function ManagerTeamPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-2xl">👥</span>
@@ -81,7 +81,7 @@ export default function ManagerTeamPage() {
             <p className="text-sm text-[#64748B]">Total Team Members</p>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-2xl">📊</span>
@@ -90,7 +90,7 @@ export default function ManagerTeamPage() {
             <p className="text-sm text-[#64748B]">Direct Reports</p>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-2xl">⏱️</span>
@@ -115,7 +115,7 @@ export default function ManagerTeamPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
+                  <tr className="border-b-2 border-slate-300 bg-gradient-to-r from-slate-50 to-blue-50">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Name</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Role</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Department</th>
@@ -127,7 +127,7 @@ export default function ManagerTeamPage() {
                   {teamMembers.map((member) => (
                     <tr
                       key={member.id || member._id}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                      className="border-b border-slate-200 hover:bg-blue-50 transition-colors bg-white"
                     >
                       <td className="py-4 px-4">
                         <p className="text-sm font-semibold text-[#0F172A]">{member.name}</p>
@@ -143,10 +143,10 @@ export default function ManagerTeamPage() {
                         <Badge
                           className={
                             member.status === "active"
-                              ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20"
+                              ? "bg-[#16A34A]/10 text-[#16A34A] border-2 border-[#16A34A]/30 font-semibold"
                               : member.status === "on-leave"
-                              ? "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20"
-                              : "bg-slate-100 text-slate-700 border-slate-200"
+                              ? "bg-[#F59E0B]/10 text-[#F59E0B] border-2 border-[#F59E0B]/30 font-semibold"
+                              : "bg-slate-100 text-slate-700 border-2 border-slate-300 font-semibold"
                           }
                         >
                           {member.status === "active" ? "Active" : member.status === "on-leave" ? "On Leave" : member.status || 'Active'}

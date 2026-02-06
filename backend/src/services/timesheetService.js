@@ -215,6 +215,26 @@ export const submitTimesheet = async (timesheetId, employee) => {
     });
   }
   
+  // Notify department lead if employee has one
+  const deptLead = await User.findOne({ 
+    role: 'dept_lead', 
+    department: employee.department,
+    status: 'active' 
+  }).select('_id');
+  if (deptLead && deptLead._id.toString() !== manager?._id?.toString()) {
+    await Notification.create({
+      userId: deptLead._id,
+      type: 'approval_required',
+      title: 'Timesheet Submission',
+      message: `${employee.name} has submitted a timesheet for ${new Date(timesheet.date).toLocaleDateString()}`,
+      relatedEntityType: 'timesheet',
+      relatedEntityId: timesheet._id,
+      priority: 'medium',
+      actionUrl: `/dept_lead/timesheets`,
+      actionLabel: 'Review Timesheet'
+    });
+  }
+  
   return timesheet;
 };
 

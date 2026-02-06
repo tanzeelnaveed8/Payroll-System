@@ -9,6 +9,8 @@ import Select from "@/components/ui/Select";
 import Link from "next/link";
 import { managerService } from "@/lib/services/managerService";
 import type { ManagerSettings, Session } from "@/lib/api/manager";
+import { settingsService } from "@/lib/services/settingsService";
+import WorkingDaysDisplay from "@/components/settings/WorkingDaysDisplay";
 
 export default function ManagerSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,7 @@ export default function ManagerSettingsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [companySettings, setCompanySettings] = useState<{ timezone?: string; workingDays?: string[] } | null>(null);
 
   // Local state for form fields
   const [name, setName] = useState("");
@@ -32,7 +35,22 @@ export default function ManagerSettingsPage() {
   useEffect(() => {
     loadSettings();
     loadSessions();
+    loadCompanySettings();
   }, []);
+
+  const loadCompanySettings = async () => {
+    try {
+      const allSettings = await settingsService.getSettings();
+      if (allSettings.company) {
+        setCompanySettings({
+          timezone: allSettings.company.timezone,
+          workingDays: allSettings.company.workingDays,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load company settings:', error);
+    }
+  };
 
   const loadSettings = async () => {
     setLoading(true);
@@ -137,7 +155,7 @@ export default function ManagerSettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Manager Settings</h1>
           <p className="text-sm sm:text-base text-[#64748B]">
@@ -153,7 +171,7 @@ export default function ManagerSettingsPage() {
 
   if (!settings) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Manager Settings</h1>
           <p className="text-sm sm:text-base text-[#64748B]">
@@ -174,7 +192,7 @@ export default function ManagerSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Manager Settings</h1>
         <p className="text-sm sm:text-base text-[#64748B]">
@@ -194,7 +212,7 @@ export default function ManagerSettingsPage() {
         </div>
       )}
 
-      <Card className="border border-slate-200 bg-white">
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-[#0F172A]">Profile</CardTitle>
         </CardHeader>
@@ -223,7 +241,7 @@ export default function ManagerSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border border-slate-200 bg-white">
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-[#0F172A]">Preferences</CardTitle>
         </CardHeader>
@@ -290,7 +308,14 @@ export default function ManagerSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="border border-slate-200 bg-white">
+      {companySettings && (
+        <WorkingDaysDisplay
+          timezone={companySettings.timezone}
+          workingDays={companySettings.workingDays}
+        />
+      )}
+
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-bold text-[#0F172A]">Security</CardTitle>
         </CardHeader>
@@ -310,7 +335,7 @@ export default function ManagerSettingsPage() {
                 {sessions.map((session) => (
                   <div
                     key={session._id}
-                    className="flex items-center justify-between p-3 border border-slate-200 rounded-lg"
+                    className="flex items-center justify-between p-3 border-2 border-slate-300 rounded-lg bg-white hover:bg-blue-50 transition-colors"
                   >
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-[#0F172A]">{session.device || 'Unknown Device'}</p>

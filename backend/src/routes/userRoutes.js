@@ -11,6 +11,7 @@ import {
   getUniqueRoles,
   getUniqueDepartments,
   downloadProfilePDF,
+  toggleUserStatus,
 } from '../controllers/userController.js';
 import { authenticate } from '../middleware/auth.js';
 import { authorize } from '../middleware/authorize.js';
@@ -42,7 +43,8 @@ router.get('/:id/download', authenticate, downloadProfilePDF); // Profile downlo
 router.get('/:id', authenticate, authorize('admin', 'manager'), validateUserId, handleValidationErrors, getUserById);
 router.post('/', authenticate, authorize('admin', 'manager'), validateCreateUser, handleValidationErrors, createUser);
 router.put('/:id', authenticate, validateUpdateUser, handleValidationErrors, updateUser);
-router.delete('/:id', authenticate, authorize('admin', 'manager'), validateUserId, handleValidationErrors, deleteUser);
+router.patch('/:id/status', authenticate, authorize('admin', 'manager'), validateUserId, handleValidationErrors, toggleUserStatus);
+router.delete('/:id', authenticate, authorize('admin'), validateUserId, handleValidationErrors, deleteUser);
 
 export default router;
 

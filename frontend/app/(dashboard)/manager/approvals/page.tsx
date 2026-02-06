@@ -123,7 +123,7 @@ export default function ManagerApprovalsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -137,7 +137,7 @@ export default function ManagerApprovalsPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Pending Approvals</h1>
         <p className="text-sm sm:text-base text-[#64748B]">
@@ -146,7 +146,7 @@ export default function ManagerApprovalsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="text-3xl">⏱️</div>
@@ -157,7 +157,7 @@ export default function ManagerApprovalsPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="text-3xl">🏖️</div>
@@ -171,7 +171,7 @@ export default function ManagerApprovalsPage() {
       </div>
 
       {pendingTimesheets.length > 0 && (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-[#0F172A]">Pending Timesheets</CardTitle>
           </CardHeader>
@@ -179,7 +179,7 @@ export default function ManagerApprovalsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
+                  <tr className="border-b-2 border-slate-300 bg-gradient-to-r from-slate-50 to-blue-50">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Employee</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Date</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Hours</th>
@@ -188,7 +188,7 @@ export default function ManagerApprovalsPage() {
                 </thead>
                 <tbody>
                   {pendingTimesheets.map((ts: any) => (
-                    <tr key={ts._id || ts.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={ts._id || ts.id} className="border-b border-slate-200 hover:bg-blue-50 bg-white">
                       <td className="py-4 px-4">
                         <p className="text-sm font-semibold text-[#0F172A]">
                           {ts.employeeId?.name || ts.employeeName || 'Unknown'}
@@ -212,7 +212,7 @@ export default function ManagerApprovalsPage() {
                               setApprovalType('timesheet');
                               setShowApproveModal(true);
                             }}
-                            className="text-xs border-green-300 text-green-600 hover:bg-green-50"
+                            className="text-xs border-2 border-green-500 text-green-700 hover:bg-green-100 font-semibold"
                           >
                             Approve
                           </Button>
@@ -224,7 +224,7 @@ export default function ManagerApprovalsPage() {
                               setApprovalType('timesheet');
                               setShowRejectModal(true);
                             }}
-                            className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                            className="text-xs border-2 border-red-500 text-red-700 hover:bg-red-100 font-semibold"
                           >
                             Reject
                           </Button>
@@ -240,7 +240,7 @@ export default function ManagerApprovalsPage() {
       )}
 
       {pendingLeaveRequests.length > 0 && (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-[#0F172A]">Pending Leave Requests</CardTitle>
           </CardHeader>
@@ -248,7 +248,7 @@ export default function ManagerApprovalsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-200">
+                  <tr className="border-b-2 border-slate-300 bg-gradient-to-r from-slate-50 to-blue-50">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Employee</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Type</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Dates</th>
@@ -258,7 +258,7 @@ export default function ManagerApprovalsPage() {
                 </thead>
                 <tbody>
                   {pendingLeaveRequests.map((lr: any) => (
-                    <tr key={lr._id || lr.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={lr._id || lr.id} className="border-b border-slate-200 hover:bg-blue-50 bg-white">
                       <td className="py-4 px-4">
                         <p className="text-sm font-semibold text-[#0F172A]">
                           {lr.employeeId?.name || lr.employeeName || 'Unknown'}
@@ -287,7 +287,7 @@ export default function ManagerApprovalsPage() {
                               setApprovalType('leave');
                               setShowApproveModal(true);
                             }}
-                            className="text-xs border-green-300 text-green-600 hover:bg-green-50"
+                            className="text-xs border-2 border-green-500 text-green-700 hover:bg-green-100 font-semibold"
                           >
                             Approve
                           </Button>
@@ -299,7 +299,7 @@ export default function ManagerApprovalsPage() {
                               setApprovalType('leave');
                               setShowRejectModal(true);
                             }}
-                            className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                            className="text-xs border-2 border-red-500 text-red-700 hover:bg-red-100 font-semibold"
                           >
                             Reject
                           </Button>
@@ -315,7 +315,7 @@ export default function ManagerApprovalsPage() {
       )}
 
       {pendingTimesheets.length === 0 && pendingLeaveRequests.length === 0 && (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-12 text-center">
             <p className="text-sm text-[#64748B] mb-2">No pending approvals</p>
             <p className="text-xs text-[#64748B]">All timesheets and leave requests have been reviewed</p>

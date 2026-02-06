@@ -111,7 +111,7 @@ export default function AddProjectPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Add New Project</h1>
         <p className="text-sm sm:text-base text-[#64748B]">

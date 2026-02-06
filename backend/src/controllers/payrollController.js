@@ -197,15 +197,25 @@ export const updatePayrollPeriod = async (req, res, next) => {
 
       const notifications = [];
       for (const user of [...managers, ...employees]) {
+        // Determine action URL based on user role
+        let actionUrl = '/employee/paystubs';
+        if (user.role === 'manager') {
+          actionUrl = '/manager/payroll';
+        } else if (user.role === 'dept_lead') {
+          actionUrl = '/dept_lead/payroll';
+        } else if (period.status !== 'completed') {
+          actionUrl = '/employee/paystubs';
+        }
+        
         notifications.push({
           userId: user._id,
-          type: 'info',
+          type: 'payroll_processed',
           title: 'Payroll Period Updated',
           message: `Payroll period ${new Date(period.periodStart).toLocaleDateString()} - ${new Date(period.periodEnd).toLocaleDateString()} has been updated.`,
           relatedEntityType: 'payroll_period',
           relatedEntityId: period._id,
           priority: 'low',
-          actionUrl: period.status === 'completed' ? '/employee/paystubs' : '/manager/reports',
+          actionUrl: actionUrl,
           actionLabel: 'View Details'
         });
       }
@@ -251,15 +261,23 @@ export const processPayroll = async (req, res, next) => {
 
       const notifications = [];
       for (const user of employees) {
+        // Determine action URL based on user role
+        let actionUrl = '/employee/paystubs';
+        if (user.role === 'manager') {
+          actionUrl = '/manager/payroll';
+        } else if (user.role === 'dept_lead') {
+          actionUrl = '/dept_lead/payroll';
+        }
+        
         notifications.push({
           userId: user._id,
-          type: 'info',
+          type: 'payroll_processed',
           title: 'Payroll Processed',
           message: `Payroll for period ${new Date(period.periodStart).toLocaleDateString()} - ${new Date(period.periodEnd).toLocaleDateString()} has been processed. Your paystub is now available.`,
           relatedEntityType: 'payroll_period',
           relatedEntityId: period._id,
           priority: 'high',
-          actionUrl: '/employee/paystubs',
+          actionUrl: actionUrl,
           actionLabel: 'View Paystub'
         });
       }
@@ -320,15 +338,23 @@ export const approvePayroll = async (req, res, next) => {
 
       const notifications = [];
       for (const user of employees) {
+        // Determine action URL based on user role
+        let actionUrl = '/employee/paystubs';
+        if (user.role === 'manager') {
+          actionUrl = '/manager/payroll';
+        } else if (user.role === 'dept_lead') {
+          actionUrl = '/dept_lead/payroll';
+        }
+        
         notifications.push({
           userId: user._id,
-          type: 'success',
+          type: 'payroll_processed',
           title: 'Payroll Approved and Paid',
           message: `Payroll for period ${new Date(period.periodStart).toLocaleDateString()} - ${new Date(period.periodEnd).toLocaleDateString()} has been approved and paid. Payment will be processed according to the pay date.`,
           relatedEntityType: 'payroll_period',
           relatedEntityId: id,
           priority: 'high',
-          actionUrl: '/employee/paystubs',
+          actionUrl: actionUrl,
           actionLabel: 'View Paystub'
         });
       }

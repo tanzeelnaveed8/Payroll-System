@@ -130,7 +130,20 @@ export const getSettings = async (type = null) => {
     // Return saved settings merged with defaults
     let result;
     if (type === 'leave') {
-      result = settings.leavePolicies || defaults?.leavePolicies || [];
+      const savedPolicies = settings.leavePolicies || [];
+      const defaultPolicies = defaults?.leavePolicies || [];
+      // Merge saved with defaults, ensuring IDs exist
+      result = savedPolicies.map(policy => ({
+        ...policy,
+        id: policy.id || policy.type, // Ensure ID exists
+      }));
+      // If no saved policies, use defaults
+      if (result.length === 0) {
+        result = defaultPolicies.map(policy => ({
+          ...policy,
+          id: policy.id || policy.type,
+        }));
+      }
     } else {
       const savedData = settings[type] || {};
       result = deepMerge(defaults || {}, savedData);
@@ -149,7 +162,20 @@ export const getSettings = async (type = null) => {
         const defaults = getDefaultSettings(settingType);
 
         if (settingType === 'leave') {
-          result.leavePolicies = saved?.leavePolicies || defaults?.leavePolicies || [];
+          const savedPolicies = saved?.leavePolicies || [];
+          const defaultPolicies = defaults?.leavePolicies || [];
+          // Ensure all policies have IDs
+          if (savedPolicies.length > 0) {
+            result.leavePolicies = savedPolicies.map(policy => ({
+              ...policy,
+              id: policy.id || policy.type,
+            }));
+          } else {
+            result.leavePolicies = defaultPolicies.map(policy => ({
+              ...policy,
+              id: policy.id || policy.type,
+            }));
+          }
         } else if (saved) {
           result[settingType] = deepMerge(defaults || {}, saved[settingType] || {});
         } else {
@@ -202,11 +228,17 @@ export const validateSettings = (type, data) => {
         errors.push({ field: 'payDay', message: 'Pay day must be between 1 and 31' });
       }
       if (data.overtimeRules) {
-        if (data.overtimeRules.rate !== undefined && (data.overtimeRules.rate < 1 || data.overtimeRules.rate > 3)) {
+        if (data.overtimeRules.enabled !== undefined && typeof data.overtimeRules.enabled !== 'boolean') {
+          errors.push({ field: 'overtimeRules.enabled', message: 'Overtime enabled must be a boolean' });
+        }
+        if (data.overtimeRules.rate !== undefined && (isNaN(data.overtimeRules.rate) || data.overtimeRules.rate < 1 || data.overtimeRules.rate > 3)) {
           errors.push({ field: 'overtimeRules.rate', message: 'Overtime rate must be between 1 and 3' });
         }
-        if (data.overtimeRules.threshold !== undefined && (data.overtimeRules.threshold < 0 || data.overtimeRules.threshold > 168)) {
+        if (data.overtimeRules.threshold !== undefined && (isNaN(data.overtimeRules.threshold) || data.overtimeRules.threshold < 0 || data.overtimeRules.threshold > 168)) {
           errors.push({ field: 'overtimeRules.threshold', message: 'Overtime threshold must be between 0 and 168 hours' });
+        }
+        if (data.overtimeRules.doubleTimeThreshold !== undefined && data.overtimeRules.doubleTimeThreshold !== null && (isNaN(data.overtimeRules.doubleTimeThreshold) || data.overtimeRules.doubleTimeThreshold < 0)) {
+          errors.push({ field: 'overtimeRules.doubleTimeThreshold', message: 'Double time threshold must be non-negative' });
         }
       }
       if (data.taxSettings) {
@@ -217,14 +249,51 @@ export const validateSettings = (type, data) => {
         });
       }
       if (data.bonuses && Array.isArray(data.bonuses)) {
-        data.bonuses.forEach((bonus, index) => {
-          if (!bonus.name) {
+        // Filter out incomplete bonuses before validation (only keep items with valid names)
+        const validBonuses = data.bonuses.filter(bonus => 
+          bonus && 
+          bonus.name && 
+          typeof bonus.name === 'string' && 
+          bonus.name.trim().length > 0
+        );
+        
+        validBonuses.forEach((bonus, index) => {
+          if (!bonus.name || typeof bonus.name !== 'string' || bonus.name.trim().length === 0) {
             errors.push({ field: `bonuses[${index}].name`, message: 'Bonus name is required' });
           }
-          if (bonus.value === undefined || bonus.value < 0) {
+          if (bonus.value === undefined || bonus.value === null || isNaN(bonus.value) || bonus.value < 0) {
             errors.push({ field: `bonuses[${index}].value`, message: 'Bonus value must be a positive number' });
           }
         });
+        
+        // Replace with filtered array if we filtered out invalid items
+        if (validBonuses.length !== data.bonuses.length) {
+          data.bonuses = validBonuses;
+        }
+      }
+      
+      if (data.deductions && Array.isArray(data.deductions)) {
+        // Filter out incomplete deductions before validation (only keep items with valid names)
+        const validDeductions = data.deductions.filter(deduction => 
+          deduction && 
+          deduction.name && 
+          typeof deduction.name === 'string' && 
+          deduction.name.trim().length > 0
+        );
+        
+        validDeductions.forEach((deduction, index) => {
+          if (!deduction.name || typeof deduction.name !== 'string' || deduction.name.trim().length === 0) {
+            errors.push({ field: `deductions[${index}].name`, message: 'Deduction name is required' });
+          }
+          if (deduction.value === undefined || deduction.value === null || isNaN(deduction.value) || deduction.value < 0) {
+            errors.push({ field: `deductions[${index}].value`, message: 'Deduction value must be a positive number' });
+          }
+        });
+        
+        // Replace with filtered array if we filtered out invalid items
+        if (validDeductions.length !== data.deductions.length) {
+          data.deductions = validDeductions;
+        }
       }
       break;
 
@@ -293,7 +362,12 @@ export const updateSettings = async (type, data, updatedBy) => {
       };
       
       if (type === 'leave') {
-        settingsData.leavePolicies = data.leavePolicies || [];
+        // Ensure all policies have IDs (use type as fallback)
+        const policiesWithIds = (data.leavePolicies || []).map(policy => ({
+          ...policy,
+          id: policy.id || policy.type, // Ensure ID exists
+        }));
+        settingsData.leavePolicies = policiesWithIds;
       } else {
         settingsData[type] = data;
       }
@@ -302,7 +376,12 @@ export const updateSettings = async (type, data, updatedBy) => {
     } else {
       // Update existing settings
       if (type === 'leave') {
-        settings.leavePolicies = data.leavePolicies || settings.leavePolicies || [];
+        // Ensure all policies have IDs (use type as fallback)
+        const policiesWithIds = (data.leavePolicies || []).map(policy => ({
+          ...policy,
+          id: policy.id || policy.type, // Ensure ID exists
+        }));
+        settings.leavePolicies = policiesWithIds.length > 0 ? policiesWithIds : settings.leavePolicies || [];
       } else {
         const defaults = getDefaultSettings(type);
         settings[type] = deepMerge(defaults || {}, deepMerge(settings[type] || {}, data));

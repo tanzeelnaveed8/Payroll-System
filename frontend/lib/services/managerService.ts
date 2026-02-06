@@ -1,17 +1,103 @@
 import { managerApi, type DashboardData, type TeamMember, type PerformanceUpdate, type CreatePerformanceUpdateData, type UpdatePerformanceUpdateData, type ManagerSettings, type UpdateManagerSettingsData, type Session } from '@/lib/api/manager';
+import { 
+  validateManagerDashboardData, 
+  type ManagerDashboardData 
+} from '../validators/managerDashboardSchema';
+
+/**
+ * Custom error class for validation failures
+ */
+export class ManagerDashboardValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly validationDetails?: unknown
+  ) {
+    super(message);
+    this.name = 'ManagerDashboardValidationError';
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ManagerDashboardValidationError);
+    }
+  }
+}
 
 export const managerService = {
-  async getDashboard(): Promise<DashboardData> {
-    const response = await managerApi.getDashboard();
-    if (response.success && response.data) {
-      return response.data;
+  /**
+   * Get manager dashboard data with validation
+   * 
+   * This method:
+   * 1. Fetches raw data from API
+   * 2. Validates against ManagerDashboardSchema
+   * 3. Returns validated, type-safe data
+   * 
+   * If validation fails:
+   * - Logs detailed error information for observability
+   * - Throws user-friendly error message
+   * - Prevents invalid data from reaching components
+   * 
+   * @throws {ManagerDashboardValidationError} If API response doesn't match schema
+   */
+  async getDashboardData(): Promise<ManagerDashboardData> {
+    try {
+      // Fetch raw data from API (unknown type for safety)
+      const response = await managerApi.getDashboard();
+      
+      // Extract data from API response wrapper
+      let rawData: unknown;
+      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+        rawData = (response as { success: boolean; data: unknown }).data;
+      } else {
+        rawData = response;
+      }
+      
+      // Validate against schema - this is the critical safety check
+      const validationResult = validateManagerDashboardData(rawData);
+      
+      if (!validationResult.success) {
+        // Log validation error with full context for observability
+        console.error('[Manager Service] Dashboard data validation failed:', {
+          error: validationResult.error,
+          details: validationResult.details,
+          rawData: rawData,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Throw user-friendly error that will be caught by React Query
+        throw new ManagerDashboardValidationError(
+          validationResult.error,
+          validationResult.details
+        );
+      }
+
+      // At this point, data is guaranteed to match ManagerDashboardSchema
+      return validationResult.data;
+    } catch (error) {
+      // Re-throw validation errors as-is
+      if (error instanceof ManagerDashboardValidationError) {
+        throw error;
+      }
+
+      // Log and re-throw other errors (network, etc.)
+      console.error('[Manager Service] Error fetching manager dashboard data:', {
+        error: error,
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
     }
+  },
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use getDashboardData() instead
+   */
+  async getDashboard(): Promise<DashboardData> {
+    const data = await this.getDashboardData();
     return {
-      teamMembers: 0,
-      directReports: 0,
-      pendingApprovals: 0,
-      timesheetsSubmitted: 0,
-      leaveRequestsPending: 0,
+      teamMembers: data.teamMembers,
+      directReports: data.directReports,
+      pendingApprovals: data.pendingApprovals,
+      timesheetsSubmitted: data.timesheetsSubmitted,
+      leaveRequestsPending: data.leaveRequestsPending,
     };
   },
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -8,6 +8,7 @@ import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import { taskService, type Task, type TaskStatus, type TaskPriority } from "@/lib/services/taskService";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/contexts/AuthContext";
 
 interface EmployeeTasksProps {
   employeeId: string;
@@ -34,6 +35,7 @@ const getPriorityBadge = (priority: TaskPriority) => {
 };
 
 export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
+  const { user } = useAuth();
   const [currentTasks, setCurrentTasks] = useState<Task[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,12 +47,10 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
     dueDate: "",
   });
 
-  useEffect(() => {
-    loadTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId]);
+  // Only dept_lead can assign tasks directly to employees (hierarchical assignment)
+  const canAssignTask = user?.role === 'dept_lead';
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     try {
       const [current, upcoming] = await Promise.all([
@@ -64,7 +64,11 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [employeeId]);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   const handleAssignTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,28 +101,35 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-[#0F172A]">Task Management</h3>
-        <Button
-          variant="gradient"
-          size="sm"
-          onClick={() => setShowAssignForm(!showAssignForm)}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
-        >
-          {showAssignForm ? "Cancel" : "+ Assign Task"}
-        </Button>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">Task Management</h3>
+        {canAssignTask && (
+          <Button
+            variant="gradient"
+            size="sm"
+            onClick={() => setShowAssignForm(!showAssignForm)}
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs sm:text-sm"
+          >
+            {showAssignForm ? "Cancel" : "+ Assign Task"}
+          </Button>
+        )}
+        {!canAssignTask && (user?.role === 'admin' || user?.role === 'manager') && (
+          <p className="text-xs text-[#64748B] italic">
+            Note: Assign tasks to Department Leads, who will delegate to employees
+          </p>
+        )}
       </div>
 
       {showAssignForm && (
         <Card className="border border-slate-200 bg-slate-50/50">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-[#0F172A]">Assign New Task</CardTitle>
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-base sm:text-lg font-bold text-[#0F172A]">Assign New Task</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAssignTask} className="space-y-4">
+            <form onSubmit={handleAssignTask} className="space-y-3 sm:space-y-4">
               <div>
-                <label className="text-sm font-semibold text-[#0F172A] mb-1 block">
+                <label className="text-xs sm:text-sm font-semibold text-[#0F172A] mb-1 block">
                   Task Title <span className="text-[#DC2626]">*</span>
                 </label>
                 <Input
@@ -126,22 +137,23 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                   onChange={(e) => setAssignForm({ ...assignForm, title: e.target.value })}
                   placeholder="Enter task title"
                   required
+                  className="text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-[#0F172A] mb-1 block">
+                <label className="text-xs sm:text-sm font-semibold text-[#0F172A] mb-1 block">
                   Description
                 </label>
                 <textarea
                   value={assignForm.description}
                   onChange={(e) => setAssignForm({ ...assignForm, description: e.target.value })}
                   placeholder="Enter task description"
-                  className="flex w-full rounded-xl border-2 border-input bg-background/50 backdrop-blur-sm px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:border-primary/50 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md focus:shadow-lg min-h-[100px] resize-none"
+                  className="flex w-full rounded-xl border-2 border-slate-300 bg-white text-[#0F172A] px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 focus-visible:border-[#2563EB]/60 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md focus:shadow-lg min-h-[80px] sm:min-h-[100px] resize-none"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-[#0F172A] mb-1 block">
+                  <label className="text-xs sm:text-sm font-semibold text-[#0F172A] mb-1 block">
                     Priority
                   </label>
                   <Select
@@ -149,6 +161,7 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                     onChange={(e) =>
                       setAssignForm({ ...assignForm, priority: e.target.value as TaskPriority })
                     }
+                    className="text-xs sm:text-sm"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -157,7 +170,7 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-[#0F172A] mb-1 block">
+                  <label className="text-xs sm:text-sm font-semibold text-[#0F172A] mb-1 block">
                     Due Date <span className="text-[#DC2626]">*</span>
                   </label>
                   <Input
@@ -165,14 +178,15 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                     value={assignForm.dueDate}
                     onChange={(e) => setAssignForm({ ...assignForm, dueDate: e.target.value })}
                     required
+                    className="text-xs sm:text-sm"
                   />
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button
                   type="submit"
                   variant="gradient"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                  className="w-full sm:flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs sm:text-sm"
                 >
                   Assign Task
                 </Button>
@@ -183,7 +197,7 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                     setShowAssignForm(false);
                     setAssignForm({ title: "", description: "", priority: "medium", dueDate: "" });
                   }}
-                  className="flex-1"
+                  className="w-full sm:flex-1 text-xs sm:text-sm"
                 >
                   Cancel
                 </Button>
@@ -194,8 +208,8 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
       )}
 
       <Card className="border border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-[#0F172A]">Current Tasks</CardTitle>
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="text-base sm:text-lg font-bold text-[#0F172A]">Current Tasks</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -205,39 +219,39 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
           ) : currentTasks.length === 0 ? (
             <p className="text-sm text-[#64748B] text-center py-4">No current tasks</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 sm:space-y-4">
               {currentTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="p-3 sm:p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-[#0F172A]">{task.title}</h4>
-                        <Badge className={cn("text-xs", getStatusBadge(task.status || "pending"))}>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-sm sm:text-base text-[#0F172A] break-words">{task.title}</h4>
+                        <Badge className={cn("text-xs flex-shrink-0", getStatusBadge(task.status || "pending"))}>
                           {task.status ? task.status.replace("-", " ") : "Pending"}
                         </Badge>
-                        <Badge className={cn("text-xs", getPriorityBadge(task.priority || "medium"))}>
+                        <Badge className={cn("text-xs flex-shrink-0", getPriorityBadge(task.priority || "medium"))}>
                           {task.priority || "Medium"}
                         </Badge>
                       </div>
                       {task.description && (
-                        <p className="text-sm text-[#64748B] mb-2">{task.description}</p>
+                        <p className="text-xs sm:text-sm text-[#64748B] mb-2 break-words">{task.description}</p>
                       )}
-                      <div className="flex items-center gap-4 text-xs text-[#64748B]">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-[#64748B]">
                         <span>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}</span>
                         <span>Assigned: {task.assignedDate ? new Date(task.assignedDate).toLocaleDateString() : "N/A"}</span>
                       </div>
                     </div>
                     {task.status !== "completed" && task.status !== "cancelled" && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 w-full sm:w-auto">
                         {task.status === "pending" && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleStatusChange(task.id, "in-progress")}
-                            className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+                            className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5 w-full sm:w-auto text-xs sm:text-sm"
                           >
                             Start
                           </Button>
@@ -246,7 +260,7 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => handleStatusChange(task.id, "completed")}
-                          className="border-[#16A34A]/20 text-[#16A34A] hover:bg-[#16A34A]/5"
+                          className="border-[#16A34A]/20 text-[#16A34A] hover:bg-[#16A34A]/5 w-full sm:w-auto text-xs sm:text-sm"
                         >
                           Complete
                         </Button>
@@ -261,8 +275,8 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
       </Card>
 
       <Card className="border border-slate-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold text-[#0F172A]">Upcoming Tasks</CardTitle>
+        <CardHeader className="pb-3 sm:pb-4">
+          <CardTitle className="text-base sm:text-lg font-bold text-[#0F172A]">Upcoming Tasks</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -272,37 +286,37 @@ export default function EmployeeTasks({ employeeId }: EmployeeTasksProps) {
           ) : upcomingTasks.length === 0 ? (
             <p className="text-sm text-[#64748B] text-center py-4">No upcoming tasks</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 sm:space-y-4">
               {upcomingTasks.map((task) => (
                 <div
                   key={task.id}
-                  className="p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+                  className="p-3 sm:p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-[#0F172A]">{task.title}</h4>
-                        <Badge className={cn("text-xs", getStatusBadge(task.status || "pending"))}>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-sm sm:text-base text-[#0F172A] break-words">{task.title}</h4>
+                        <Badge className={cn("text-xs flex-shrink-0", getStatusBadge(task.status || "pending"))}>
                           {task.status ? task.status.replace("-", " ") : "Pending"}
                         </Badge>
-                        <Badge className={cn("text-xs", getPriorityBadge(task.priority || "medium"))}>
+                        <Badge className={cn("text-xs flex-shrink-0", getPriorityBadge(task.priority || "medium"))}>
                           {task.priority || "Medium"}
                         </Badge>
                       </div>
                       {task.description && (
-                        <p className="text-sm text-[#64748B] mb-2">{task.description}</p>
+                        <p className="text-xs sm:text-sm text-[#64748B] mb-2 break-words">{task.description}</p>
                       )}
-                      <div className="flex items-center gap-4 text-xs text-[#64748B]">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-[#64748B]">
                         <span>Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "N/A"}</span>
                         <span>Assigned: {task.assignedDate ? new Date(task.assignedDate).toLocaleDateString() : "N/A"}</span>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleStatusChange(task.id, "in-progress")}
-                        className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+                        className="border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5 w-full sm:w-auto text-xs sm:text-sm"
                       >
                         Start
                       </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -31,13 +31,7 @@ export default function DepartmentLeadTasksPage() {
     overdue: 0,
   });
 
-  useEffect(() => {
-    if (user?.id) {
-      loadTasks();
-    }
-  }, [user, filters, sort, page]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -68,7 +62,13 @@ export default function DepartmentLeadTasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, sort, page]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadTasks();
+    }
+  }, [user, loadTasks]);
 
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
@@ -98,7 +98,7 @@ export default function DepartmentLeadTasksPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="h-64 bg-slate-200 rounded"></div>
@@ -108,7 +108,7 @@ export default function DepartmentLeadTasksPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Task Management</h1>
@@ -123,7 +123,7 @@ export default function DepartmentLeadTasksPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <Card className="border border-slate-200 bg-white">
           <CardContent className="p-6">
             <div className="text-2xl font-bold text-[#0F172A]">{stats.total}</div>

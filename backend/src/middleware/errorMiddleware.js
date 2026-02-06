@@ -10,19 +10,27 @@ import {
 } from '../utils/errorHandler.js';
 import { sendError } from '../utils/responseHandler.js';
 
-const sendErrorDev = (err, res) => {
-  console.error('Error Details:', {
-    message: err.message,
-    statusCode: err.statusCode,
-    name: err.name,
-    stack: err.stack,
-  });
+const sendErrorDev = (err, res, req) => {
+  // Skip logging for missing profile images (expected 404s)
+  const isMissingProfileImage = req?.path?.startsWith('/uploads/profiles') && 
+                                 err.statusCode === 404 &&
+                                 err.message?.includes("Can't find");
+  
+  if (!isMissingProfileImage) {
+    console.error('Error Details:', {
+      message: err.message,
+      statusCode: err.statusCode,
+      name: err.name,
+      stack: err.stack,
+    });
+  }
   
   return sendError(res, err.statusCode, err.message, {
     errors: err.errors || null,
     ...(process.env.NODE_ENV === 'development' && {
       stack: err.stack,
       error: err,
+      validationErrors: err.errors || null,
     }),
   });
 };
@@ -41,6 +49,19 @@ const sendErrorProd = (err, res) => {
 export const globalErrorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
+  
+  // Skip error handling for missing profile images (expected 404s, handled gracefully)
+  const isMissingProfileImage = req?.path?.startsWith('/uploads/profiles') && 
+                                 err.statusCode === 404 &&
+                                 (err.message?.includes("Can't find") || err.message?.includes('IMAGE_NOT_FOUND'));
+  
+  if (isMissingProfileImage) {
+    return res.status(404).json({ 
+      status: 'error',
+      message: 'Profile image not found',
+      code: 'IMAGE_NOT_FOUND'
+    });
+  }
   
   // Handle MongoDB connection errors professionally
   if (err.name === 'MongoServerSelectionError' || 
@@ -89,7 +110,7 @@ export const globalErrorHandler = (err, req, res, next) => {
   }
   
   if (process.env.NODE_ENV === 'development') {
-    return sendErrorDev(err, res);
+    return sendErrorDev(err, res, req);
   }
   
   let error = { ...err };
@@ -110,6 +131,15 @@ export const globalErrorHandler = (err, req, res, next) => {
 };
 
 export const notFoundHandler = (req, res, next) => {
+  // Skip error logging for missing profile images (handled by middleware)
+  if (req.path.startsWith('/uploads/profiles') && req.get('X-Missing-File')) {
+    return res.status(404).json({ 
+      status: 'error',
+      message: 'Profile image not found',
+      code: 'IMAGE_NOT_FOUND'
+    });
+  }
+  
   const err = new AppError(`Can't find ${req.originalUrl} on this server!`, 404);
   next(err);
 };

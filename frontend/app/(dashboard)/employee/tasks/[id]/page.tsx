@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
@@ -20,13 +20,7 @@ export default function EmployeeTaskDetailPage() {
   const [updating, setUpdating] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (taskId) {
-      loadTask();
-    }
-  }, [taskId]);
-
-  const loadTask = async () => {
+  const loadTask = useCallback(async () => {
     try {
       setLoading(true);
       const taskData = await taskService.getTask(taskId);
@@ -42,7 +36,13 @@ export default function EmployeeTaskDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [taskId, router]);
+
+  useEffect(() => {
+    if (taskId) {
+      loadTask();
+    }
+  }, [taskId, loadTask]);
 
   const handleStatusUpdate = async (newStatus: TaskStatus) => {
     if (!task) return;
@@ -85,7 +85,7 @@ export default function EmployeeTaskDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="h-64 bg-slate-200 rounded"></div>
@@ -96,7 +96,7 @@ export default function EmployeeTaskDetailPage() {
 
   if (!task) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="text-center py-12">
           <p className="text-[#64748B]">Task not found</p>
           <Link href="/employee/tasks">
@@ -108,7 +108,7 @@ export default function EmployeeTaskDetailPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <Link href="/employee/tasks">
@@ -129,7 +129,7 @@ export default function EmployeeTaskDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Task Details</CardTitle>
             </CardHeader>
@@ -223,7 +223,7 @@ export default function EmployeeTaskDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Attachments</CardTitle>
             </CardHeader>
@@ -238,7 +238,7 @@ export default function EmployeeTaskDetailPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Actions</CardTitle>
             </CardHeader>
@@ -271,7 +271,7 @@ export default function EmployeeTaskDetailPage() {
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 bg-white">
+          <Card className="border-2 border-slate-300 bg-white shadow-sm">
             <CardHeader>
               <CardTitle className="text-lg font-bold text-[#0F172A]">Assigned By</CardTitle>
             </CardHeader>

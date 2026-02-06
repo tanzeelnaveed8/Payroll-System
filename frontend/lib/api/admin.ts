@@ -1,45 +1,11 @@
 import { apiClient } from './client';
+import type { AdminDashboardData } from '@/lib/validators/adminDashboardSchema';
 
-export interface AdminDashboardData {
-  kpis: {
-    totalEmployees: number;
-    employeeGrowth: number;
-    newHiresLast30Days: number;
-    payrollStatus: {
-      total: number;
-      status: string;
-      nextPayday: string | null;
-    };
-    pendingApprovals: number;
-    pendingTimesheets: number;
-    pendingLeaveRequests: number;
-    pendingPayroll: number;
-    totalDepartments: number;
-    averageSalary: number;
-    leaveRequestsThisMonth: number;
-    timesheetCompletionRate: number;
-    compliance: number;
-  };
-  recentPayrollActivity: Array<{
-    id: string;
-    period: string;
-    amount: number;
-    status: string;
-    date: string;
-    employees: number;
-  }>;
-  departmentBreakdown: {
-    departments: Array<{
-      id: string;
-      name: string;
-      employees: number;
-      payroll: number;
-      bgColor: string;
-      barColor: string;
-    }>;
-    largestDepartment: string | null;
-  };
-}
+/**
+ * Re-export AdminDashboardData type from schema
+ * This ensures single source of truth - types are derived from validation schema
+ */
+export type { AdminDashboardData };
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -48,9 +14,33 @@ export interface ApiResponse<T> {
 }
 
 export const adminApi = {
-  async getDashboard(): Promise<AdminDashboardData> {
-    const response = await apiClient.get<ApiResponse<AdminDashboardData>>('/admin/dashboard');
-    return response.data;
+  /**
+   * Get admin dashboard data
+   * 
+   * Note: This method does NOT validate the response.
+   * Validation should be done in the service layer using validateAdminDashboardData.
+   * This separation allows for better error handling and logging.
+   * 
+   * Returns raw, unvalidated data from the API for validation in the service layer.
+   */
+  async getDashboard(): Promise<unknown> {
+    try {
+      const response = await apiClient.get<ApiResponse<unknown>>('/admin/dashboard');
+      // Extract data from API response wrapper
+      // The API may return { success, message, data } or just the data directly
+      if (response && typeof response === 'object' && 'data' in response) {
+        return (response as ApiResponse<unknown>).data;
+      }
+      // If response is the data directly, return it
+      return response;
+    } catch (error) {
+      // Log API errors for observability
+      console.error('[Admin API] Failed to fetch dashboard data:', {
+        error: error,
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
+    }
   }
 };
 

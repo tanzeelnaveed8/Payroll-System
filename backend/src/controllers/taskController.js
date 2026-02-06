@@ -212,6 +212,18 @@ export const createTask = async (req, res, next) => {
   try {
     const { employeeId, title, description, priority, dueDate, estimatedHours, tags, category, attachments } = req.body;
     
+    // Log incoming data for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[createTask] Incoming request data:', {
+        employeeId,
+        title,
+        priority,
+        dueDate,
+        description: description ? 'provided' : 'not provided',
+        estimatedHours,
+      });
+    }
+    
     if (!employeeId || !title || !priority || !dueDate) {
       return next(new InvalidInputError('Employee ID, title, priority, and due date are required'));
     }
@@ -232,18 +244,46 @@ export const createTask = async (req, res, next) => {
     }
     
     // Verify assignment permissions
-    const targetEmployee = await User.findById(employeeId);
-    if (!targetEmployee) {
-      return next(new ResourceNotFoundError('Employee'));
+    const targetUser = await User.findById(employeeId);
+    if (!targetUser) {
+      return next(new ResourceNotFoundError('User not found'));
     }
     
-    // Admin and manager can assign to anyone (including dept_lead and employees)
-    // Dept_lead can only assign to employees in their department
-    if (req.user.role === 'dept_lead') {
-      const deptLead = await User.findById(req.user._id).select('department').lean();
-      if (targetEmployee.department !== deptLead?.department || targetEmployee.role !== 'employee') {
+    // Hierarchical task assignment rules:
+    // 1. Admin and Manager can ONLY assign tasks to dept_lead (not directly to employees)
+    // 2. Dept_lead can assign tasks to employees in their department
+    if (req.user.role === 'admin' || req.user.role === 'manager') {
+      // Admin and Manager must assign to dept_lead only
+      if (targetUser.role !== 'dept_lead') {
+        return next(new AccessDeniedError(
+          'You can only assign tasks to Department Leads. Department Leads will then assign tasks to relevant employees.'
+        ));
+      }
+    } else if (req.user.role === 'dept_lead') {
+      // Dept_lead can only assign to employees in their department
+      const deptLead = await User.findById(req.user._id).select('department departmentId').lean();
+      if (!deptLead) {
+        return next(new ResourceNotFoundError('Department Lead not found'));
+      }
+      
+      // Check if target is an employee
+      if (targetUser.role !== 'employee') {
         return next(new AccessDeniedError('You can only assign tasks to employees in your department'));
       }
+      
+      // Check if employee is in the same department
+      const sameDepartment = 
+        (deptLead.departmentId && targetUser.departmentId && 
+         deptLead.departmentId.toString() === targetUser.departmentId.toString()) ||
+        (deptLead.department && targetUser.department && 
+         deptLead.department === targetUser.department);
+      
+      if (!sameDepartment) {
+        return next(new AccessDeniedError('You can only assign tasks to employees in your department'));
+      }
+    } else {
+      // Employees cannot assign tasks
+      return next(new AccessDeniedError('You do not have permission to assign tasks'));
     }
     
     const taskData = {

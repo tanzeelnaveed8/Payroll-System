@@ -12,8 +12,23 @@ interface LeavePoliciesProps {
 }
 
 export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps) {
-  const handlePolicyChange = (id: string, field: keyof LeavePolicy, value: any) => {
-    const updated = policies.map((p) => (p.id === id ? { ...p, [field]: value } : p));
+  const handlePolicyChange = (policyId: string | undefined, index: number, field: keyof LeavePolicy, value: any) => {
+    const updated = [...policies];
+    // Use ID to find the policy, fallback to index if ID is missing
+    const policyIndex = policyId 
+      ? updated.findIndex(p => (p.id || p.type) === policyId)
+      : index;
+    
+    if (policyIndex === -1) {
+      // If not found by ID, use the provided index
+      const current = updated[index];
+      if (!current) return;
+      updated[index] = { ...current, [field]: value };
+    } else {
+      const current = updated[policyIndex];
+      if (!current) return;
+      updated[policyIndex] = { ...current, [field]: value };
+    }
     onChange(updated);
   };
 
@@ -33,95 +48,104 @@ export default function LeavePolicies({ policies, onChange }: LeavePoliciesProps
 
   return (
     <div className="space-y-6">
-      {policies.map((policy) => (
-        <Card key={policy.id} className="border border-slate-200 bg-white">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`px-3 py-1 rounded-lg border text-sm font-semibold ${getLeaveTypeColor(
-                    policy.type
-                  )}`}
-                >
-                  {policy.type.charAt(0).toUpperCase() + policy.type.slice(1)}
+      {policies.map((policy, index) => {
+        // Use ID or type as stable identifier
+        const policyId = policy.id || policy.type;
+        return (
+          <Card key={policyId || index} className="border-2 border-slate-300 bg-white shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`px-3 py-1 rounded-lg border-2 text-sm font-semibold ${getLeaveTypeColor(
+                      policy.type
+                    )}`}
+                  >
+                    {policy.type.charAt(0).toUpperCase() + policy.type.slice(1)}
+                  </div>
+                  <CardTitle className="text-lg font-bold text-[#0F172A]">{policy.name}</CardTitle>
                 </div>
-                <CardTitle className="text-lg font-bold text-[#0F172A]">{policy.name}</CardTitle>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={policy.enabled}
-                  onChange={(e) => handlePolicyChange(policy.id || "", "enabled", e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
-              </label>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-[#0F172A]">
-                  Max Days <span className="text-[#DC2626]">*</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={policy.enabled ?? true}
+                    onChange={(e) => handlePolicyChange(policyId, index, "enabled", e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
                 </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={policy.maxDays}
-                  onChange={(e) =>
-                    handlePolicyChange(policy.id || "", "maxDays", parseInt(e.target.value) || 0)
-                  }
-                />
-                <p className="text-xs text-[#64748B]">Maximum days per year</p>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4 bg-white">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">
+                    Max Days <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={policy.maxDays ?? 0}
+                    onChange={(e) =>
+                      handlePolicyChange(policyId, index, "maxDays", parseInt(e.target.value) || 0)
+                    }
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
+                  />
+                  <p className="text-xs text-[#64748B]">Maximum days per year</p>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-[#0F172A]">
-                  Accrual Rate <span className="text-[#DC2626]">*</span>
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={policy.accrualRate}
-                  onChange={(e) =>
-                    handlePolicyChange(policy.id || "", "accrualRate", parseFloat(e.target.value) || 0)
-                  }
-                />
-                <p className="text-xs text-[#64748B]">Days accrued per month</p>
-              </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">
+                    Accrual Rate <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={policy.accrualRate ?? 0}
+                    onChange={(e) =>
+                      handlePolicyChange(policyId, index, "accrualRate", parseFloat(e.target.value) || 0)
+                    }
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
+                  />
+                  <p className="text-xs text-[#64748B]">Days accrued per month</p>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-[#0F172A]">
-                  Carry Forward Limit <span className="text-[#DC2626]">*</span>
-                </label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={policy.carryForwardLimit}
-                  onChange={(e) =>
-                    handlePolicyChange(
-                      policy.id || "",
-                      "carryForwardLimit",
-                      parseInt(e.target.value) || 0
-                    )
-                  }
-                />
-                <p className="text-xs text-[#64748B]">Max days to carry to next year</p>
-              </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">
+                    Carry Forward Limit <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={policy.carryForwardLimit ?? 0}
+                    onChange={(e) =>
+                      handlePolicyChange(
+                        policyId,
+                        index,
+                        "carryForwardLimit",
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
+                  />
+                  <p className="text-xs text-[#64748B]">Max days to carry to next year</p>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-[#0F172A]">Policy Name</label>
-                <Input
-                  value={policy.name}
-                  onChange={(e) => handlePolicyChange(policy.id || "", "name", e.target.value)}
-                  placeholder="Leave type name"
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">Policy Name</label>
+                  <Input
+                    value={policy.name ?? ''}
+                    onChange={(e) => handlePolicyChange(policyId, index, "name", e.target.value)}
+                    placeholder="Leave type name"
+                    className="border-2 border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 text-[#0F172A]"
+                  />
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

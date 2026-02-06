@@ -17,6 +17,22 @@ interface CompanySettingsProps {
 export default function CompanySettings({ settings, onChange }: CompanySettingsProps) {
   const [timezones, setTimezones] = useState<Timezone[]>([]);
   const [loadingTimezones, setLoadingTimezones] = useState(true);
+  const [localSettings, setLocalSettings] = useState<CompanySettings>(settings || {});
+
+  // Normalize working days to lowercase for consistent comparison
+  const normalizeWorkingDays = (days: string[] | undefined): string[] => {
+    if (!days || !Array.isArray(days)) return [];
+    return days.map(day => day.toLowerCase().trim());
+  };
+
+  // Keep local settings in sync when parent settings change (e.g. after save or reload)
+  useEffect(() => {
+    const normalizedSettings = {
+      ...settings,
+      workingDays: normalizeWorkingDays(settings?.workingDays),
+    };
+    setLocalSettings(normalizedSettings || {});
+  }, [settings]);
 
   useEffect(() => {
     const loadTimezones = async () => {
@@ -42,11 +58,20 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
   ];
 
   const handleWorkingDayToggle = (day: string) => {
-    const currentDays = settings.workingDays || [];
-    const newDays = currentDays.includes(day)
-      ? currentDays.filter((d) => d !== day)
-      : [...currentDays, day];
-    onChange({ ...settings, workingDays: newDays });
+    // Normalize day to lowercase for consistent comparison
+    const normalizedDay = day.toLowerCase().trim();
+    const currentDays = normalizeWorkingDays(localSettings.workingDays);
+    
+    // Check if day is already selected (case-insensitive)
+    const isSelected = currentDays.some(d => d.toLowerCase() === normalizedDay);
+    
+    const newDays = isSelected
+      ? currentDays.filter((d) => d.toLowerCase() !== normalizedDay)
+      : [...currentDays, normalizedDay];
+    
+    const updated = { ...localSettings, workingDays: newDays };
+    setLocalSettings(updated);
+    onChange(updated);
   };
 
   return (
@@ -80,8 +105,12 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
               Timezone <span className="text-[#DC2626]">*</span>
             </label>
             <Select
-              value={settings.timezone || ""}
-              onChange={(e) => onChange({ ...settings, timezone: e.target.value })}
+              value={localSettings.timezone || ""}
+              onChange={(e) => {
+                const updated = { ...localSettings, timezone: e.target.value };
+                setLocalSettings(updated);
+                onChange(updated);
+              }}
               disabled={loadingTimezones}
             >
               {loadingTimezones ? (
@@ -101,20 +130,27 @@ export default function CompanySettings({ settings, onChange }: CompanySettingsP
               Working Days <span className="text-[#DC2626]">*</span>
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-              {workingDays.map((day) => (
-                <button
-                  key={day.value}
-                  type="button"
-                  onClick={() => handleWorkingDayToggle(day.value)}
-                  className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
-                    (settings.workingDays || []).includes(day.value)
-                      ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]"
-                      : "border-slate-200 bg-white text-[#64748B] hover:border-slate-300"
-                  }`}
-                >
-                  {day.label}
-                </button>
-              ))}
+              {workingDays.map((day) => {
+                const normalizedCurrentDays = normalizeWorkingDays(localSettings.workingDays);
+                const isSelected = normalizedCurrentDays.some(d => d.toLowerCase() === day.value.toLowerCase());
+                
+                return (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => handleWorkingDayToggle(day.value)}
+                    className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 ${
+                      isSelected
+                        ? "border-[#2563EB] bg-[#2563EB]/10 text-[#2563EB]"
+                        : "border-slate-200 bg-white text-[#64748B] hover:border-slate-300"
+                    }`}
+                    aria-pressed={isSelected}
+                    aria-label={`${isSelected ? 'Deselect' : 'Select'} ${day.label} as working day`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
             </div>
             <p className="text-xs text-[#64748B]">Select the days your company operates</p>
           </div>

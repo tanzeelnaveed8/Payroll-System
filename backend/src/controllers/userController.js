@@ -352,32 +352,209 @@ export const updateUser = async (req, res, next) => {
   }
 };
 
+/**
+ * Delete a user (Admin only)
+ * Only inactive employees can be deleted
+ * Active employees must be deactivated first
+ * Performs hard delete with proper cleanup of related data
+ */
 export const deleteUser = async (req, res, next) => {
   try {
     const { id } = req.params;
     
+    // Find user
     const user = await User.findById(id);
     if (!user) {
-      return next(new ResourceNotFoundError('User'));
+      return next(new ResourceNotFoundError('User not found'));
     }
     
-    // Soft delete - set status to terminated
-    user.status = 'terminated';
-    user.terminationDate = new Date();
-    await user.save();
-    
-    // Update department employee counts
-    if (user.departmentId) {
-      await Department.findByIdAndUpdate(user.departmentId, {
-        $inc: { employeeCount: -1, activeEmployeeCount: user.status === 'active' ? -1 : 0 }
-      });
+    // Prevent deleting yourself
+    if (user._id.toString() === req.user._id.toString()) {
+      return next(new InvalidInputError('You cannot delete your own account'));
     }
     
-    // Audit log
-    await logUserAction(req, 'delete', 'user', user._id, null, `Deleted user: ${user.name}`);
+    // Only allow deletion of inactive employees
+    // Active employees must be deactivated first
+    if (user.status === 'active') {
+      return next(new InvalidInputError(
+        'Cannot delete active employee. Please deactivate the employee first by changing their status to inactive, then delete them.'
+      ));
+    }
     
-    return sendSuccess(res, 200, 'User deleted successfully');
+    // Only allow deletion of inactive or terminated users
+    if (!['inactive', 'terminated'].includes(user.status)) {
+      return next(new InvalidInputError(
+        `Cannot delete employee with status "${user.status}". Only inactive or terminated employees can be deleted.`
+      ));
+    }
+    
+    // Prevent deleting other admins (only allow if current user is admin)
+    if (user.role === 'admin' && req.user.role !== 'admin') {
+      return next(new AuthenticationFailedError('Only administrators can delete admin accounts'));
+    }
+    
+    const userName = user.name;
+    const userEmail = user.email;
+    const userDepartmentId = user.departmentId;
+    const previousStatus = user.status;
+    
+    // Import related models for cleanup
+    const Timesheet = (await import('../models/Timesheet.js')).default;
+    const LeaveRequest = (await import('../models/LeaveRequest.js')).default;
+    const Task = (await import('../models/Task.js')).default;
+    const Notification = (await import('../models/Notification.js')).default;
+    const FileAttachment = (await import('../models/FileAttachment.js')).default;
+    const PayStub = (await import('../models/PayStub.js')).default;
+    const PayrollCalculation = (await import('../models/PayrollCalculation.js')).default;
+    const DailyReport = (await import('../models/DailyReport.js')).default;
+    const ProgressUpdate = (await import('../models/ProgressUpdate.js')).default;
+    const PerformanceUpdate = (await import('../models/PerformanceUpdate.js')).default;
+    const UserSession = (await import('../models/UserSession.js')).default;
+    
+    // Cleanup related data (soft delete or nullify references)
+    // Use Promise.all for parallel execution where safe
+    const cleanupPromises = [];
+    
+    // 1. Update timesheets - mark as rejected (closest status to deleted)
+    // Note: Timesheet model doesn't have 'deleted' status, so we mark as rejected
+    cleanupPromises.push(
+      Timesheet.updateMany(
+        { employeeId: user._id, status: { $ne: 'rejected' } },
+        { $set: { status: 'rejected', comments: 'Timesheet rejected due to employee deletion', updatedAt: new Date() } }
+      ).catch(err => console.error('Error cleaning up timesheets:', err))
+    );
+    
+    // 2. Update leave requests - mark as rejected (closest status to cancelled)
+    // Note: LeaveRequest model doesn't have 'cancelled' status, so we mark as rejected
+    cleanupPromises.push(
+      LeaveRequest.updateMany(
+        { employeeId: user._id, status: { $ne: 'rejected' } },
+        { $set: { status: 'rejected', comments: 'Leave request rejected due to employee deletion', updatedAt: new Date() } }
+      ).catch(err => console.error('Error cleaning up leave requests:', err))
+    );
+    
+    // 3. Update tasks - mark as cancelled (Task model supports this status)
+    cleanupPromises.push(
+      Task.updateMany(
+        { employeeId: user._id, status: { $ne: 'cancelled' } },
+        { $set: { status: 'cancelled', updatedAt: new Date() } }
+      ).catch(err => console.error('Error cleaning up tasks:', err))
+    );
+    
+    // 4. Delete notifications for this user
+    cleanupPromises.push(
+      Notification.deleteMany({ userId: user._id }).catch(err => console.error('Error cleaning up notifications:', err))
+    );
+    
+    // 5. Soft delete file attachments
+    cleanupPromises.push(
+      FileAttachment.updateMany(
+        { uploadedBy: user._id },
+        { $set: { status: 'deleted', deletedAt: new Date() } }
+      ).catch(err => console.error('Error cleaning up file attachments:', err))
+    );
+    
+    // 6. Update pay stubs - keep for records (no status change needed, just update timestamp)
+    // Pay stubs are historical records and should be preserved
+    cleanupPromises.push(
+      PayStub.updateMany(
+        { employeeId: user._id },
+        { $set: { updatedAt: new Date() } }
+      ).catch(err => console.error('Error updating pay stubs:', err))
+    );
+    
+    // 7. Update payroll calculations - keep for records
+    // Payroll calculations are historical records and should be preserved
+    cleanupPromises.push(
+      PayrollCalculation.updateMany(
+        { employeeId: user._id },
+        { $set: { updatedAt: new Date() } }
+      ).catch(err => console.error('Error updating payroll calculations:', err))
+    );
+    
+    // 8. Update daily reports - keep for records
+    cleanupPromises.push(
+      DailyReport.updateMany(
+        { employeeId: user._id },
+        { $set: { updatedAt: new Date() } }
+      ).catch(err => console.error('Error updating daily reports:', err))
+    );
+    
+    // 9. Update progress updates - keep for records
+    cleanupPromises.push(
+      ProgressUpdate.updateMany(
+        { employeeId: user._id },
+        { $set: { updatedAt: new Date() } }
+      ).catch(err => console.error('Error updating progress updates:', err))
+    );
+    
+    // 10. Update performance updates - keep for records
+    cleanupPromises.push(
+      PerformanceUpdate.updateMany(
+        { employeeId: user._id },
+        { $set: { updatedAt: new Date() } }
+      ).catch(err => console.error('Error updating performance updates:', err))
+    );
+    
+    // 11. Delete user sessions
+    cleanupPromises.push(
+      UserSession.deleteMany({ userId: user._id }).catch(err => console.error('Error cleaning up user sessions:', err))
+    );
+    
+    // 12. Update manager references - remove from directReports
+    cleanupPromises.push(
+      User.updateMany(
+        { directReports: user._id },
+        { $pull: { directReports: user._id } }
+      ).catch(err => console.error('Error updating manager references:', err))
+    );
+    
+    // 13. Update employees who report to this user - clear managerId
+    cleanupPromises.push(
+      User.updateMany(
+        { managerId: user._id },
+        { $unset: { managerId: '' } }
+      ).catch(err => console.error('Error updating employee manager references:', err))
+    );
+    
+    // Execute all cleanup operations
+    await Promise.all(cleanupPromises);
+    
+    // Update department employee counts BEFORE deletion
+    if (userDepartmentId) {
+      const updateQuery = {
+        $inc: { employeeCount: -1 }
+      };
+      
+      // Only decrement activeEmployeeCount if the user was active
+      if (previousStatus === 'active') {
+        updateQuery.$inc.activeEmployeeCount = -1;
+      }
+      
+      await Department.findByIdAndUpdate(userDepartmentId, updateQuery);
+    }
+    
+    // Hard delete the user (permanent removal)
+    await User.findByIdAndDelete(user._id);
+    
+    // Audit log - record deletion
+    await logUserAction(
+      req, 
+      'delete', 
+      'user', 
+      user._id, 
+      null, 
+      `Permanently deleted ${previousStatus} user: ${userName} (${userEmail}). Role: ${user.role}. All related data has been archived or cleaned up.`
+    );
+    
+    // Log for production monitoring
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[USER_DELETED] Admin: ${req.user.email}, Deleted User: ${userEmail}, Role: ${user.role}, Status: ${previousStatus}`);
+    }
+    
+    return sendSuccess(res, 200, `Employee "${userName}" has been permanently deleted. All related data has been archived.`);
   } catch (error) {
+    console.error('Error deleting user:', error);
     next(error);
   }
 };
@@ -480,7 +657,14 @@ export const updateCurrentUserProfile = async (req, res, next) => {
     
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
+        // Handle address: if it's a string, convert to object structure
+        if (field === 'address' && typeof req.body[field] === 'string') {
+          updateData[field] = {
+            street: req.body[field].trim()
+          };
+        } else {
         updateData[field] = req.body[field];
+        }
       }
     });
     
@@ -739,8 +923,92 @@ export const uploadProfilePhoto = async (req, res, next) => {
 
 export const getUniqueRoles = async (req, res, next) => {
   try {
-    const roles = await User.distinct('role', { role: { $exists: true } });
-    return sendSuccess(res, 200, 'Roles retrieved successfully', { roles });
+    // Get all distinct roles from User collection
+    const existingRoles = await User.distinct('role', { role: { $exists: true } });
+
+    // Get all defined roles from User schema
+    const definedRoles = ['admin', 'manager', 'dept_lead', 'employee'];
+
+    // Return all defined roles (this ensures all roles are available even if no users exist with them)
+    return sendSuccess(res, 200, 'Roles retrieved successfully', { roles: definedRoles });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Toggle user status (activate/deactivate)
+ * Only admin and manager can perform this action
+ * Deactivated users cannot login
+ */
+export const toggleUserStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    if (!status || !['active', 'inactive'].includes(status)) {
+      return next(new InvalidInputError('Status must be either "active" or "inactive"'));
+    }
+
+    // Find user
+    const user = await User.findById(id);
+    if (!user) {
+      return next(new ResourceNotFoundError('User not found'));
+    }
+
+    // Prevent deactivating yourself
+    if (user._id.toString() === req.user._id.toString() && status === 'inactive') {
+      return next(new InvalidInputError('You cannot deactivate your own account'));
+    }
+
+    // Prevent deactivating other admins (only allow if current user is admin)
+    if (user.role === 'admin' && req.user.role !== 'admin') {
+      return next(new AuthenticationFailedError('Only administrators can modify admin accounts'));
+    }
+
+    const previousStatus = user.status;
+    user.status = status;
+    user.updatedAt = new Date();
+    user.updatedBy = req.user._id;
+
+    // If deactivating, also invalidate all active sessions
+    if (status === 'inactive') {
+      // Note: Session invalidation would be handled by login check in authController
+      // But we can add a flag or timestamp here if needed
+    }
+
+    await user.save();
+
+    // Update department active employee count
+    if (user.departmentId) {
+      const statusChange = status === 'active' ? 1 : (previousStatus === 'active' ? -1 : 0);
+      if (statusChange !== 0) {
+        await Department.findByIdAndUpdate(user.departmentId, {
+          $inc: { activeEmployeeCount: statusChange }
+        });
+      }
+    }
+
+    // Audit log
+    const action = status === 'active' ? 'activate' : 'deactivate';
+    await logUserAction(req, action, 'user', user._id, {
+      before: { status: previousStatus },
+      after: { status: status }
+    }, `${action === 'activate' ? 'Activated' : 'Deactivated'} user: ${user.name}`);
+
+    const userResponse = await User.findById(user._id)
+      .select('-password')
+      .populate('departmentId', 'name code')
+      .populate('managerId', 'name email')
+      .lean();
+
+    return sendSuccess(
+      res,
+      200,
+      `User ${status === 'active' ? 'activated' : 'deactivated'} successfully`,
+      { user: userResponse }
+    );
   } catch (error) {
     next(error);
   }

@@ -66,7 +66,7 @@ export default function DeptLeadDashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -80,17 +80,17 @@ export default function DeptLeadDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Welcome back, Department Lead</h1>
-          <p className="text-sm sm:text-base text-[#64748B]">
+          <h1 className="fluid-h1 font-bold text-[#0F172A] mb-2">Welcome back, Department Lead</h1>
+          <p className="fluid-body text-[#64748B]">
             Overview of your department and task assignments
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
         {kpis.map((kpi, idx) => (
           <Card
             key={idx}

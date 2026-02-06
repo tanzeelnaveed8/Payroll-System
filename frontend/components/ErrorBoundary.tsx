@@ -5,7 +5,7 @@ import Button from './ui/Button';
 
 interface Props {
   children: ReactNode;
-  fallback?: ReactNode;
+  fallback?: ReactNode | ((props: { error: Error; resetErrorBoundary: () => void }) => ReactNode);
 }
 
 interface State {
@@ -40,6 +40,13 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
+        // Support both function and ReactNode fallbacks
+        if (typeof this.props.fallback === 'function') {
+          return this.props.fallback({
+            error: this.state.error || new Error('Unknown error'),
+            resetErrorBoundary: this.handleReset,
+          });
+        }
         return this.props.fallback;
       }
 

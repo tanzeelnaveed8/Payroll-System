@@ -152,14 +152,20 @@ export default function CreatePeriodModal({ isOpen, onClose, onSuccess }: Create
             )}
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-              <Button variant="outline" type="button" onClick={onClose} disabled={loading}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="px-4 sm:px-6 h-10 sm:h-11 border-2 border-[#F59E0B]/40 text-[#92400E] bg-[#FEF3C7] hover:bg-[#FDE68A] hover:border-[#F59E0B]/80 font-semibold"
+              >
                 Cancel
               </Button>
               <Button
                 variant="gradient"
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white"
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white h-10 sm:h-11 px-4 sm:px-6"
               >
                 {loading ? "Creating..." : "Create Period"}
               </Button>

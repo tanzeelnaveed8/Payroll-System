@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
+import { CheckSquare, Eye, Play, CheckCircle, Clock, ListTodo, CalendarClock } from "lucide-react";
 import { taskService, type Task, type TaskStatus, type TaskPriority } from "@/lib/services/taskService";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { toast } from "@/lib/hooks/useToast";
@@ -16,13 +17,7 @@ export default function EmployeeTasksPage() {
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user?.id) {
-      loadTasks();
-    }
-  }, [user]);
-
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
@@ -42,7 +37,13 @@ export default function EmployeeTasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadTasks();
+    }
+  }, [user?.id, loadTasks]);
 
   const handleStatusUpdate = async (taskId: string, newStatus: TaskStatus) => {
     try {
@@ -81,7 +82,7 @@ export default function EmployeeTasksPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-slate-200 rounded w-48"></div>
           <div className="grid grid-cols-1 gap-4">
@@ -95,14 +96,14 @@ export default function EmployeeTasksPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">My Tasks</h1>
         <p className="text-sm sm:text-base text-[#64748B]">View and manage your assigned tasks</p>
       </div>
 
       {currentTasks.length > 0 && (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-[#0F172A]">Current Tasks</CardTitle>
           </CardHeader>
@@ -186,14 +187,14 @@ export default function EmployeeTasksPage() {
       )}
 
       {upcomingTasks.length > 0 && (
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-[#0F172A]">Upcoming Tasks</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {upcomingTasks.map((task) => (
-                <div key={task.id} className="p-4 rounded-lg border border-slate-200 bg-white">
+                <div key={task.id} className="p-4 rounded-lg border-2 border-slate-300 bg-white hover:bg-blue-50 transition-colors">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <Link href={`/employee/tasks/${task.id}`}>

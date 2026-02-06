@@ -1,6 +1,5 @@
 import {
   employeeApi,
-  type EmployeeDashboardData,
   type CurrentTimesheet,
   type Paystub,
   type PaystubDetail,
@@ -9,6 +8,10 @@ import {
   type CreateLeaveRequestData,
 } from '@/lib/api/employee';
 import { usersApi, type User, type UserFilters } from '@/lib/api/users';
+import {
+  validateEmployeeDashboardData,
+  type EmployeeDashboardData,
+} from '../validators/employeeDashboardSchema';
 
 // Employment types matching User interface from @/lib/api/users
 export type EmploymentType = 'full-time' | 'part-time' | 'contract' | 'intern';
@@ -29,21 +32,110 @@ const mapId = (obj: any): any => {
   return obj;
 };
 
-export const employeeService = {
-  async getDashboard(): Promise<EmployeeDashboardData> {
-    const response = await employeeApi.getDashboard();
-    if (response.success && response.data) {
-      const data = response.data;
-      return {
-        ...data,
-        latestPaystub: data.latestPaystub ? mapId(data.latestPaystub) : null,
-        leaveOverview: {
-          ...data.leaveOverview,
-          upcomingLeaves: data.leaveOverview.upcomingLeaves.map(mapId),
-        },
-      };
+/**
+ * Custom error class for validation failures
+ */
+export class EmployeeDashboardValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly validationDetails?: unknown
+  ) {
+    super(message);
+    this.name = 'EmployeeDashboardValidationError';
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, EmployeeDashboardValidationError);
     }
-    throw new Error(response.message || 'Failed to load dashboard');
+  }
+}
+
+export const employeeService = {
+  /**
+   * Get employee dashboard data with validation
+   * 
+   * This method:
+   * 1. Fetches raw data from API
+   * 2. Validates against EmployeeDashboardSchema
+   * 3. Returns validated, type-safe data
+   * 
+   * If validation fails:
+   * - Logs detailed error information for observability
+   * - Throws user-friendly error message
+   * - Prevents invalid data from reaching components
+   * 
+   * @throws {EmployeeDashboardValidationError} If API response doesn't match schema
+   */
+  async getDashboard(): Promise<EmployeeDashboardData> {
+    try {
+      // Fetch raw data from API (unknown type for safety)
+      const response = await employeeApi.getDashboard();
+      
+      // Extract data from API response wrapper
+      let rawData: unknown;
+      if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
+        rawData = (response as { success: boolean; data: unknown }).data;
+      } else {
+        rawData = response;
+      }
+      
+      // Map IDs if needed (for backward compatibility)
+      let mappedData: unknown = rawData;
+      if (rawData && typeof rawData === 'object' && rawData !== null) {
+        const data = rawData as any;
+        mappedData = {
+          ...data,
+          latestPaystub: data.latestPaystub ? mapId(data.latestPaystub) : null,
+          leaveOverview: {
+            ...data.leaveOverview,
+            upcomingLeaves: data.leaveOverview?.upcomingLeaves?.map(mapId) || [],
+          },
+        };
+      }
+      
+      // Validate against schema - this is the critical safety check
+      const validationResult = validateEmployeeDashboardData(mappedData);
+      
+      if (!validationResult.success) {
+        // Log validation error with full context for observability
+        // Note: userId will be added by the calling component if available
+        console.error('[Employee Service] Dashboard data validation failed:', {
+          error: validationResult.error,
+          details: validationResult.details,
+          rawData: mappedData,
+          timestamp: new Date().toISOString(),
+          service: 'employeeService',
+          method: 'getDashboard',
+        });
+
+        // Throw user-friendly error that will be caught by React Query
+        throw new EmployeeDashboardValidationError(
+          validationResult.error,
+          validationResult.details
+        );
+      }
+
+      // At this point, data is guaranteed to match EmployeeDashboardSchema
+      return validationResult.data;
+    } catch (error) {
+      // Re-throw validation errors as-is
+      if (error instanceof EmployeeDashboardValidationError) {
+        throw error;
+      }
+
+      // Log and re-throw other errors (network, etc.)
+      if (error instanceof Error) {
+        console.error('[Employee Service] Failed to fetch dashboard data:', {
+          error: error.message,
+          name: error.name,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+        });
+        throw error;
+      }
+
+      // Handle unexpected error types
+      throw new Error('An unexpected error occurred while fetching dashboard data');
+    }
   },
 
   async getCurrentTimesheet(): Promise<CurrentTimesheet> {
@@ -228,13 +320,115 @@ export const employeeService = {
         }
       }
 
+      // Log request data for debugging (without sensitive info)
+      console.log('[EmployeeService] Creating employee:', {
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        department: data.department,
+        employmentType: data.employmentType,
+        timestamp: new Date().toISOString(),
+      });
+
       const response = await usersApi.createUser(createUserData);
+      
       if (response.success && response.data?.user) {
         return mapId(response.data.user) as Employee;
       }
+      
+      // If response is not successful, throw with message
       throw new Error(response.message || 'Failed to create employee');
+    } catch (error: any) {
+      // Enhanced error logging for production debugging
+      console.error('[EmployeeService] Failed to add employee:', {
+        error: error,
+        message: error?.message,
+        stack: error?.stack,
+        name: 'name' in data ? data.name : undefined,
+        email: 'email' in data ? data.email : undefined,
+        role: 'role' in data ? data.role : undefined,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Re-throw with original error message
+      // The error message will be handled by AddEmployeeModal
+      throw error;
+    }
+  },
+
+  /**
+   * Delete an employee (Admin only)
+   * Only inactive employees can be deleted
+   * Active employees must be deactivated first
+   */
+  async deleteEmployee(id: string): Promise<void> {
+    try {
+      console.log('[EmployeeService] Deleting employee:', {
+        id: id,
+        timestamp: new Date().toISOString(),
+      });
+
+      const response = await usersApi.deleteUser(id);
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to delete employee');
+      }
+    } catch (error: any) {
+      // Enhanced error logging for production debugging
+      console.error('[EmployeeService] Failed to delete employee:', {
+        error: error,
+        message: error?.message,
+        stack: error?.stack,
+        id: id,
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Re-throw with original error message
+      throw error;
+    }
+  },
+
+  async updateEmployee(
+    id: string,
+    data: {
+      name?: string;
+      email?: string;
+      role?: string;
+      department?: string;
+      position?: string;
+      employmentType?: EmploymentType;
+      status?: EmploymentStatus;
+      photo?: string;
+      phone?: string;
+      employeeId?: string;
+      baseSalary?: number;
+      skills?: string[];
+      fields?: string[];
+    }
+  ): Promise<Employee> {
+    try {
+      const updateData: import('@/lib/api/users').UpdateUserRequest = {
+        name: data.name,
+        email: data.email,
+        role: data.role as any,
+        department: data.department,
+        position: data.position,
+        employmentType: data.employmentType,
+        status: data.status,
+        phone: data.phone,
+        employeeId: data.employeeId,
+        baseSalary: data.baseSalary,
+        skills: data.skills,
+        fields: data.fields,
+      };
+
+      const response = await usersApi.updateUser(id, updateData);
+      if (response.success && response.data?.user) {
+        return mapId(response.data.user) as Employee;
+      }
+      throw new Error(response.message || 'Failed to update employee');
     } catch (error) {
-      console.error('Failed to add employee:', error);
+      console.error('Failed to update employee:', error);
       throw error;
     }
   },

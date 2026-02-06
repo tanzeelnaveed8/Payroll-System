@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -33,38 +33,29 @@ export default function AdminTasksPage() {
 
   const pageSize = 10;
 
-  useEffect(() => {
-    loadEmployees();
-    loadTasks();
-  }, []);
-
-  useEffect(() => {
-    loadTasks();
-  }, [filters, sort, page]);
-
-  const loadEmployees = async () => {
+  const loadEmployees = useCallback(async () => {
     setLoadingEmployees(true);
     try {
-      // Fetch employees with max limit of 100 (API constraint)
-      const response = await usersApi.getUsers({ limit: 100, role: "employee", status: "active" });
-      const employeesList = Array.isArray(response.data) ? response.data : [];
-      setEmployees(employeesList);
-      if (employeesList.length === 0) {
-        toast.warning("No active employees found. Please register employees first.");
+      // Admin can only assign tasks to Department Leads (hierarchical assignment)
+      const response = await usersApi.getUsers({ limit: 100, role: "dept_lead", status: "active" });
+      const deptLeadsList = Array.isArray(response.data) ? response.data : [];
+      setEmployees(deptLeadsList);
+      if (deptLeadsList.length === 0) {
+        toast.warning("No active Department Leads found. Please register Department Leads first.");
       }
     } catch (err: any) {
       setEmployees([]);
       const errorMessage = err?.message || err?.toString() || "Unknown error";
       // Only show toast if it's not a validation error (which is handled by the backend)
       if (!errorMessage.includes("charAt") && !errorMessage.includes("Cannot read properties")) {
-        toast.error(`Failed to load employees: ${errorMessage}`);
+        toast.error(`Failed to load Department Leads: ${errorMessage}`);
       }
     } finally {
       setLoadingEmployees(false);
     }
-  };
+  }, []);
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -78,7 +69,16 @@ export default function AdminTasksPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, sort, page, pageSize]);
+
+  useEffect(() => {
+    loadEmployees();
+    loadTasks();
+  }, [loadEmployees, loadTasks]);
+
+  useEffect(() => {
+    loadTasks();
+  }, [loadTasks]);
 
   const handleCreateTask = async () => {
     if (!createData.employeeId || !createData.title || !createData.dueDate) {
@@ -105,7 +105,7 @@ export default function AdminTasksPage() {
         dueDate: "",
         estimatedHours: "",
       });
-      toast.success("Task created successfully and assigned to employee!");
+      toast.success("Task created successfully and assigned to Department Lead!");
       setPage(1);
       await loadTasks();
     } catch (error: any) {
@@ -337,7 +337,7 @@ export default function AdminTasksPage() {
             <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4 sm:space-y-5">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-[#0F172A]">
-                  Employee <span className="text-[#DC2626]">*</span>
+                  Department Lead <span className="text-[#DC2626]">*</span>
                 </label>
                 <Select
                   value={createData.employeeId}
@@ -346,29 +346,30 @@ export default function AdminTasksPage() {
                   disabled={loadingEmployees}
                 >
                   <option value="">
-                    {loadingEmployees ? "Loading employees..." : "Select employee"}
+                    {loadingEmployees ? "Loading Department Leads..." : "Select Department Lead"}
                   </option>
                   {!loadingEmployees && employees.length === 0 ? (
-                    <option value="" disabled>No employees available. Please register employees first.</option>
+                    <option value="" disabled>No Department Leads available. Please register Department Leads first.</option>
                   ) : (
-                    employees.map((emp) => {
-                      const skillsText = emp.skills && emp.skills.length > 0 ? ` | Skills: ${emp.skills.join(', ')}` : '';
-                      const fieldsText = emp.fields && emp.fields.length > 0 ? ` | Fields: ${emp.fields.join(', ')}` : '';
-                      const deptText = emp.department ? ` | ${emp.department}` : '';
-                      const positionText = emp.position ? ` | ${emp.position}` : '';
+                    employees.map((deptLead) => {
+                      const deptText = deptLead.department ? ` | ${deptLead.department}` : '';
+                      const positionText = deptLead.position ? ` | ${deptLead.position}` : '';
                       return (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name} ({emp.email}){deptText}{positionText}{skillsText}{fieldsText}
+                        <option key={deptLead.id} value={deptLead.id}>
+                          {deptLead.name} ({deptLead.email}){deptText}{positionText}
                         </option>
                       );
                     })
                   )}
                 </Select>
                 {!loadingEmployees && employees.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-1">
-                    No active employees found. Please register employees in the employee management section.
+                  <p className="text-xs font-semibold text-amber-700 mt-1">
+                    No active Department Leads found. Please register Department Leads in the user management section.
                   </p>
                 )}
+                <p className="text-xs text-[#64748B] mt-1">
+                  Note: Tasks assigned to Department Leads will be delegated to relevant employees by the Department Lead.
+                </p>
                 {createData.employeeId && (() => {
                   const selectedEmp = employees.find(e => e.id === createData.employeeId);
                   if (selectedEmp && (selectedEmp.skills?.length > 0 || selectedEmp.fields?.length > 0)) {

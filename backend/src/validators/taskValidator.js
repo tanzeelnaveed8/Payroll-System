@@ -24,7 +24,7 @@ export const validateCreateTask = [
     .isLength({ min: 1, max: 200 })
     .withMessage('Title must be between 1 and 200 characters'),
   body('description')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .isLength({ max: 2000 })
     .withMessage('Description must be less than 2000 characters'),
@@ -36,32 +36,47 @@ export const validateCreateTask = [
   body('dueDate')
     .notEmpty()
     .withMessage('Due date is required')
-    .isISO8601()
-    .withMessage('Please provide a valid due date')
     .custom((value) => {
+      // Accept both ISO8601 datetime strings and date-only strings (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+      if (!dateRegex.test(value)) {
+        throw new Error('Please provide a valid due date in YYYY-MM-DD format');
+      }
       const dueDate = new Date(value);
+      if (isNaN(dueDate.getTime())) {
+        throw new Error('Please provide a valid due date');
+      }
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      dueDate.setHours(0, 0, 0, 0);
       if (dueDate < today) {
         throw new Error('Due date cannot be in the past');
       }
       return true;
     }),
   body('estimatedHours')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Estimated hours must be a positive number'),
+    .optional({ checkFalsy: true })
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true;
+      }
+      const numValue = typeof value === 'string' ? parseFloat(value) : Number(value);
+      if (isNaN(numValue) || numValue < 0) {
+        throw new Error('Estimated hours must be a positive number');
+      }
+      return true;
+    }),
   body('tags')
-    .optional()
+    .optional({ checkFalsy: true })
     .isArray()
     .withMessage('Tags must be an array'),
   body('category')
-    .optional()
+    .optional({ checkFalsy: true })
     .isString()
     .isLength({ max: 100 })
     .withMessage('Category must be less than 100 characters'),
   body('attachments')
-    .optional()
+    .optional({ checkFalsy: true })
     .isArray()
     .withMessage('Attachments must be an array'),
 ];
@@ -213,6 +228,19 @@ export const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map((e) => e.msg);
+    // Log validation errors for debugging
+    console.error('[Task Validation] Validation failed:', {
+      errors: errorMessages,
+      body: {
+        employeeId: req.body.employeeId,
+        title: req.body.title,
+        priority: req.body.priority,
+        dueDate: req.body.dueDate,
+        description: req.body.description ? 'provided' : 'not provided',
+        estimatedHours: req.body.estimatedHours,
+      },
+      timestamp: new Date().toISOString(),
+    });
     return next(new InvalidInputError('Validation failed', errorMessages));
   }
   next();

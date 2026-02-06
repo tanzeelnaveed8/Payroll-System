@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
 import ToastContainer from "@/components/ui/Toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -21,10 +22,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ErrorBoundary>
-          <AuthProvider>
-            {children}
-            <ToastContainer />
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              {children}
+              <ToastContainer />
+            </AuthProvider>
+          </QueryProvider>
         </ErrorBoundary>
       </body>
     </html>

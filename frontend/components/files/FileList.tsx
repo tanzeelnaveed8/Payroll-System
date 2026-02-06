@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fileService, type FileAttachment } from "@/lib/services/fileService";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Button from "@/components/ui/Button";
@@ -43,11 +43,7 @@ export default function FileList({
     return false;
   };
 
-  useEffect(() => {
-    loadFiles();
-  }, [entityType, entityId]);
-
-  const loadFiles = async () => {
+  const loadFiles = useCallback(async () => {
     try {
       setLoading(true);
       const fileList = await fileService.getFilesByEntity(entityType, entityId);
@@ -57,7 +53,11 @@ export default function FileList({
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityType, entityId]);
+
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   const handleDownload = async (file: FileAttachment) => {
     try {

@@ -13,6 +13,14 @@ export interface User {
   status: 'active' | 'inactive' | 'on-leave' | 'terminated';
   photo?: string;
   phone?: string;
+  address?: string | {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  };
+  bio?: string;
   joinDate?: string;
   baseSalary?: number;
   managerId?: string;
@@ -42,7 +50,7 @@ export interface CreateUserRequest {
   email: string;
   password: string;
   name: string;
-  role: 'admin' | 'manager' | 'employee';
+  role: 'admin' | 'manager' | 'employee' | 'dept_lead';
   employeeId?: string;
   departmentId?: string;
   department?: string;
@@ -58,7 +66,7 @@ export interface CreateUserRequest {
 export interface UpdateUserRequest {
   name?: string;
   email?: string;
-  role?: 'admin' | 'manager' | 'employee';
+  role?: 'admin' | 'manager' | 'employee' | 'dept_lead';
   employeeId?: string;
   departmentId?: string;
   department?: string;
@@ -129,11 +137,39 @@ export const usersApi = {
   },
 
   async createUser(data: CreateUserRequest): Promise<UserResponse> {
-    const response = await apiClient.post<{ success: boolean; message: string; data: { user: any } }>('/users', data);
-    return {
-      ...response,
-      data: { user: transformUser(response.data.user) },
-    };
+    try {
+      // Validate required fields before making the request
+      if (!data.email || !data.password || !data.name || !data.role) {
+        throw new Error('Email, password, name, and role are required to create a user');
+      }
+
+      const response = await apiClient.post<{ success: boolean; message: string; data: { user: any } }>('/users', data);
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to create user');
+      }
+      
+      if (!response.data?.user) {
+        throw new Error('Invalid response format from server');
+      }
+      
+      return {
+        ...response,
+        data: { user: transformUser(response.data.user) },
+      };
+    } catch (error: any) {
+      // Log API call error for debugging
+      console.error('[UsersAPI] Error creating user:', {
+        error: error,
+        message: error?.message,
+        endpoint: '/users',
+        method: 'POST',
+        timestamp: new Date().toISOString(),
+      });
+      
+      // Re-throw with original error message
+      throw error;
+    }
   },
 
   async updateUser(id: string, data: UpdateUserRequest): Promise<UserResponse> {
@@ -144,8 +180,28 @@ export const usersApi = {
     };
   },
 
+  async toggleUserStatus(id: string, status: 'active' | 'inactive'): Promise<UserResponse> {
+    const response = await apiClient.patch<{ success: boolean; message: string; data: { user: any } }>(`/users/${id}/status`, { status });
+    return {
+      ...response,
+      data: { user: transformUser(response.data.user) },
+    };
+  },
+
   async deleteUser(id: string): Promise<{ success: boolean; message: string }> {
-    return apiClient.delete(`/users/${id}`);
+    try {
+      const response = await apiClient.delete<{ success: boolean; message: string }>(`/users/${id}`);
+      return response;
+    } catch (error: any) {
+      console.error('[UsersAPI] Error deleting user:', {
+        error: error,
+        message: error?.message,
+        endpoint: `/users/${id}`,
+        method: 'DELETE',
+        timestamp: new Date().toISOString(),
+      });
+      throw error;
+    }
   },
 
   async getCurrentUserProfile(): Promise<UserResponse> {

@@ -1,25 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
 import Select from "@/components/ui/Select";
 import Input from "@/components/ui/Input";
 import Link from "next/link";
-import { managerService } from "@/lib/services/managerService";
+import { managerService, ManagerDashboardValidationError } from "@/lib/services/managerService";
 import type { PerformanceUpdate, TeamMember } from "@/lib/api/manager";
 import { toast } from "@/lib/hooks/useToast";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useManagerDashboardQuery } from "@/lib/hooks/useManagerDashboardQuery";
+import DashboardErrorBoundary from "@/components/errors/DashboardErrorBoundary";
+import ErrorFallback from "@/components/errors/ErrorFallback";
+import { useAnnouncement } from "@/lib/hooks/useAnnouncement";
+import ManagerDashboardSkeleton from "@/components/skeletons/ManagerDashboardSkeleton";
+import {
+  NoManagerDashboardDataEmptyState,
+  NoTeamMembersEmptyState,
+  NoPendingApprovalsEmptyState,
+  NoPerformanceUpdatesEmptyState,
+  ManagerDashboardUnavailableEmptyState,
+} from "@/components/empty-states/ManagerDashboardEmptyStates";
+import { Users, BarChart3, Timer, FileEdit, RefreshCw, X } from "lucide-react";
+
+/**
+ * Format timestamp to relative time (e.g., "2 minutes ago")
+ */
+function formatLastUpdated(timestamp: Date | null): string {
+  if (!timestamp) return 'Never';
+  
+  const now = new Date();
+  const diff = now.getTime() - timestamp.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor(diff / 1000);
+  
+  if (seconds < 10) return 'Just now';
+  if (seconds < 60) return `${seconds} seconds ago`;
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`;
+  
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  
+  return timestamp.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
 
 export default function ManagerDashboardPage() {
-  const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState({
-    teamMembers: 0,
-    directReports: 0,
-    pendingApprovals: 0,
-    timesheetsSubmitted: 0,
-    leaveRequestsPending: 0,
-  });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [updates, setUpdates] = useState<PerformanceUpdate[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -36,33 +68,74 @@ export default function ManagerDashboardPage() {
     blockers: "",
     nextDayFocus: "",
   });
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const announce = useAnnouncement();
 
+  // Use React Query hook for dashboard data fetching with automatic caching and refetching
+  const {
+    data: dashboardData,
+    isLoading,
+    isRefreshing,
+    error,
+    refresh,
+    dataUpdatedAt,
+  } = useManagerDashboardQuery();
+
+  // Announce data refresh to screen readers
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    loadPerformanceUpdates();
-  }, [filterEmployee, filterDate]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [dashboard, team] = await Promise.all([
-        managerService.getDashboard(),
-        managerService.getTeam(),
-      ]);
-      setDashboardData(dashboard);
-      setTeamMembers(team);
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to load dashboard data. Please try again.';
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
+    if (isRefreshing) {
+      announce("Refreshing dashboard data");
     }
-  };
+  }, [isRefreshing, announce]);
 
-  const loadPerformanceUpdates = async () => {
+  // Announce successful data load
+  useEffect(() => {
+    if (dashboardData && !isLoading && !isRefreshing) {
+      announce("Dashboard data loaded successfully");
+    }
+  }, [dashboardData, isLoading, isRefreshing, announce]);
+
+  useEffect(() => {
+    // Ensure user is manager or admin - redirect if not
+    if (!authLoading && user) {
+      const userRole = user.role?.toLowerCase().trim();
+      if (userRole !== 'manager' && userRole !== 'admin') {
+        if (userRole === 'employee') {
+          router.push('/employee');
+        } else if (userRole === 'dept_lead' || userRole === 'department_lead') {
+          router.push('/department_lead');
+        }
+        return;
+      }
+    }
+  }, [user, authLoading, router]);
+
+  // Load team members separately (not part of dashboard data)
+  useEffect(() => {
+    const loadTeam = async () => {
+      try {
+        const team = await managerService.getTeam();
+        setTeamMembers(team);
+      } catch (error: any) {
+        // Log error for observability
+        console.error('[ManagerDashboard] Failed to load team members:', {
+          error: error?.message,
+          stack: error?.stack,
+          timestamp: new Date().toISOString(),
+        });
+        // Show user-friendly error message - team members are needed for performance updates
+        toast.error('Failed to load team members. Some features may be limited.');
+        // Set empty array to prevent crashes
+        setTeamMembers([]);
+      }
+    };
+    if (user) {
+      loadTeam();
+    }
+  }, [user]);
+
+  const loadPerformanceUpdates = useCallback(async () => {
     try {
       const params: any = { limit: 100 };
       if (filterEmployee !== "all") {
@@ -88,16 +161,27 @@ export default function ManagerDashboardPage() {
       const result = await managerService.getPerformanceUpdates(params);
       setUpdates(result.updates);
     } catch (error: any) {
-      // Error handled silently - updates will be empty
+      // Log error for observability instead of silently failing
+      console.error('[ManagerDashboard] Failed to load performance updates:', {
+        error: error?.message,
+        stack: error?.stack,
+        timestamp: new Date().toISOString(),
+      });
+      // Show user-friendly error message
+      toast.error('Failed to load performance updates. Please try again.');
     }
-  };
+  }, [filterEmployee, filterDate]);
+
+  useEffect(() => {
+    loadPerformanceUpdates();
+  }, [loadPerformanceUpdates]);
 
   const getRatingColor = (rating: number) => {
-    if (rating === 1) return "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20";
-    if (rating === 2) return "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20";
-    if (rating === 3) return "bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/20";
-    if (rating === 4) return "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20";
-    return "bg-[#16A34A]/20 text-[#16A34A] border-[#16A34A]/30";
+    if (rating === 1) return "bg-[#DC2626]/10 text-[#DC2626] border-2 border-[#DC2626]/30 font-semibold";
+    if (rating === 2) return "bg-[#F59E0B]/10 text-[#F59E0B] border-2 border-[#F59E0B]/30 font-semibold";
+    if (rating === 3) return "bg-[#2563EB]/10 text-[#2563EB] border-2 border-[#2563EB]/30 font-semibold";
+    if (rating === 4) return "bg-[#16A34A]/10 text-[#16A34A] border-2 border-[#16A34A]/30 font-semibold";
+    return "bg-[#16A34A]/20 text-[#16A34A] border-2 border-[#16A34A]/40 font-semibold";
   };
 
   const handleSave = async () => {
@@ -128,74 +212,182 @@ export default function ManagerDashboardPage() {
       toast.success('Performance update saved successfully!');
       await loadPerformanceUpdates();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to save performance update');
+      // Log error for observability
+      console.error('[ManagerDashboard] Failed to save performance update:', {
+        error: error?.message,
+        stack: error?.stack,
+        formData: {
+          employeeId: formData.employeeId,
+          date: formData.date,
+          rating: formData.rating,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      // Show user-friendly error message
+      const errorMessage = error?.message || 'Failed to save performance update. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setSaving(false);
     }
   };
 
-  const kpis = [
-    {
-      label: "Team Members",
-      value: dashboardData.teamMembers.toString(),
-      sublabel: "Direct reports",
-      icon: "👥",
-    },
-    {
-      label: "Direct Reports",
-      value: dashboardData.directReports.toString(),
-      sublabel: "Active team",
-      icon: "📊",
-    },
-    {
-      label: "Pending Approvals",
-      value: dashboardData.pendingApprovals.toString(),
-      sublabel: "Requires action",
-      icon: "⏱️",
-    },
-    {
-      label: "Timesheets Submitted",
-      value: dashboardData.timesheetsSubmitted.toString(),
-      sublabel: "This period",
-      icon: "📝",
-    },
-  ];
+  // Calculate last updated timestamp
+  const lastUpdated = useMemo(() => {
+    return dataUpdatedAt ? new Date(dataUpdatedAt) : null;
+  }, [dataUpdatedAt]);
 
-  if (loading) {
+  // State: Loading (initial load with no cached data)
+  // Show skeleton loader that matches the dashboard layout to prevent CLS
+  if (isLoading && !dashboardData) {
     return (
-      <div className="space-y-6 p-4 sm:p-6 lg:p-0">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-48"></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-slate-200 rounded"></div>
-            ))}
-          </div>
-        </div>
+      <DashboardErrorBoundary>
+        <ManagerDashboardSkeleton />
+      </DashboardErrorBoundary>
+    );
+  }
+
+  // State: Error (with no cached data to show)
+  if (error && !dashboardData) {
+    // Check if it's a validation error for more specific messaging
+    const isValidationError = error instanceof ManagerDashboardValidationError || 
+      (error instanceof Error && error.message.includes('Invalid dashboard data'));
+    
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <ErrorFallback
+          error={error instanceof Error ? error : new Error(String(error))}
+          resetErrorBoundary={() => refresh()}
+          title={isValidationError ? "Data Validation Error" : "Failed to Load Dashboard"}
+          message={
+            isValidationError
+              ? "The dashboard data received from the server doesn't match the expected format. This may indicate a backend issue. Please contact support if this problem persists."
+              : "We encountered an issue while loading your dashboard data. This may be due to a network issue or a temporary service problem."
+          }
+          actionLabel="Retry"
+          onSecondaryAction={() => router.push("/manager")}
+          secondaryActionLabel="Return to Dashboard"
+        />
       </div>
     );
   }
 
+  // State: Empty (no data available)
+  if (!dashboardData) {
+    return (
+      <DashboardErrorBoundary>
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <ManagerDashboardUnavailableEmptyState
+            onRefresh={() => refresh()}
+            onGoHome={() => router.push("/manager")}
+          />
+        </div>
+      </DashboardErrorBoundary>
+    );
+  }
+
+  // Use safe defaults to prevent null/undefined errors
+  const safeDashboardData = {
+    teamMembers: dashboardData.teamMembers || 0,
+    directReports: dashboardData.directReports || 0,
+    pendingApprovals: dashboardData.pendingApprovals || 0,
+    timesheetsSubmitted: dashboardData.timesheetsSubmitted || 0,
+    leaveRequestsPending: dashboardData.leaveRequestsPending || 0,
+  };
+
+  const kpis = [
+    {
+      label: "Team Members",
+      value: safeDashboardData.teamMembers.toString(),
+      sublabel: "Direct reports",
+      icon: "users",
+    },
+    {
+      label: "Direct Reports",
+      value: safeDashboardData.directReports.toString(),
+      sublabel: "Active team",
+      icon: "bar-chart",
+    },
+    {
+      label: "Pending Approvals",
+      value: safeDashboardData.pendingApprovals.toString(),
+      sublabel: "Requires action",
+      icon: "timer",
+    },
+    {
+      label: "Timesheets Submitted",
+      value: safeDashboardData.timesheetsSubmitted.toString(),
+      sublabel: "This period",
+      icon: "file-edit",
+    },
+  ];
+
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <DashboardErrorBoundary>
+      <main id="main-content" tabIndex={-1} className="space-y-6 p-4 sm:p-6 relative" role="main" aria-label="Manager Dashboard">
+      {/* Background refresh indicator - subtle overlay when refreshing */}
+      {isRefreshing && dashboardData && (
+        <div 
+          className="absolute inset-0 bg-white/30 backdrop-blur-[2px] z-40 flex items-start justify-center pt-8 rounded-lg pointer-events-none"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div className="bg-white border-2 border-blue-200 rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent" aria-hidden="true"></div>
+            <span className="text-sm text-[#2563EB] font-medium">Refreshing data...</span>
+          </div>
+        </div>
+      )}
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Welcome back, Manager</h1>
-          <p className="text-sm sm:text-base text-[#64748B]">
+          <h1 className="fluid-h1 font-bold text-[#0F172A] mb-2">Welcome back, Manager</h1>
+          <p className="fluid-body text-[#64748B]">
             Overview of your team and pending approvals
           </p>
+          {/* Last updated timestamp */}
+          {lastUpdated && (
+            <p className="text-xs text-[#64748B] mt-1" aria-live="polite" aria-atomic="true">
+              <span className="sr-only">Dashboard last updated</span>
+              Last updated: {formatLastUpdated(lastUpdated)}
+            </p>
+          )}
         </div>
-      </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Manual Refresh Button */}
+          <Button
+            onClick={() => {
+              refresh();
+              announce("Refreshing dashboard data");
+            }}
+            disabled={isRefreshing}
+            variant="outline"
+            size="default"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 border-2 border-[#E2E8F0] bg-white hover:bg-[#F8FAFC] text-[#2563EB] font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label={isRefreshing ? "Refreshing dashboard data, please wait" : "Refresh dashboard data"}
+            aria-busy={isRefreshing}
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </Button>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((kpi, idx) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
+        {(() => {
+          const kpiIconMap: Record<string, React.ReactNode> = {
+            "users": <Users className="w-7 h-7 text-blue-600" />,
+            "bar-chart": <BarChart3 className="w-7 h-7 text-blue-600" />,
+            "timer": <Timer className="w-7 h-7 text-blue-600" />,
+            "file-edit": <FileEdit className="w-7 h-7 text-blue-600" />,
+          };
+          return kpis.map((kpi, idx) => (
           <Card
             key={idx}
-            className="border border-slate-200 bg-white hover:shadow-lg transition-all duration-300 cursor-default"
+            className="border-2 border-slate-300 bg-white hover:shadow-xl transition-all duration-300 cursor-default shadow-sm"
           >
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="text-3xl">{kpi.icon}</div>
+                <div aria-hidden="true">{kpiIconMap[kpi.icon] || null}</div>
                 <div className="h-2 w-2 rounded-full bg-[#2563EB]"></div>
               </div>
               <div className="space-y-1">
@@ -205,67 +397,87 @@ export default function ManagerDashboardPage() {
               </div>
             </CardContent>
           </Card>
-        ))}
+        ));
+        })()}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border border-slate-200 bg-white">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg font-bold text-[#0F172A]">Team Performance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-[#64748B]">
-              Your team has shown consistent performance this period. Review detailed analytics and metrics to track progress and identify areas for improvement.
-            </p>
-            <Link href="/manager/team">
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
-              >
-                View Details
-              </Button>
-            </Link>
+            {teamMembers.length === 0 ? (
+              <NoTeamMembersEmptyState
+                onViewTeam={() => router.push("/manager/team")}
+                onAddEmployee={() => router.push("/admin/employees")}
+              />
+            ) : (
+              <>
+                <p className="text-sm text-[#64748B]">
+                  Your team has shown consistent performance this period. Review detailed analytics and metrics to track progress and identify areas for improvement.
+                </p>
+                <Link href="/manager/team">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+                  >
+                    View Details
+                  </Button>
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold text-[#0F172A]">Approval Overview</CardTitle>
-              <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/20">
-                {dashboardData.pendingApprovals} Pending
-              </Badge>
+              {safeDashboardData.pendingApprovals > 0 && (
+                <Badge className="bg-[#2563EB]/10 text-[#2563EB] border-[#2563EB]/20">
+                  {safeDashboardData.pendingApprovals} Pending
+                </Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#0F172A]">Timesheets</span>
-                <span className="text-sm font-semibold text-[#0F172A]">{dashboardData.timesheetsSubmitted}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[#0F172A]">Leave Requests</span>
-                <span className="text-sm font-semibold text-[#0F172A]">{dashboardData.leaveRequestsPending}</span>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Link href="/manager/approvals" className="w-full">
-                <Button
-                  variant="gradient"
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:opacity-90"
-                >
-                  Review Approvals
-                </Button>
-              </Link>
-              <Link href="/manager/tasks" className="w-full">
-                <Button
-                  variant="outline"
-                  className="w-full border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
-                >
-                  View Tasks Report
-                </Button>
-              </Link>
-            </div>
+            {safeDashboardData.pendingApprovals === 0 && safeDashboardData.timesheetsSubmitted === 0 && safeDashboardData.leaveRequestsPending === 0 ? (
+              <NoPendingApprovalsEmptyState
+                onViewApprovals={() => router.push("/manager/approvals")}
+              />
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-[#0F172A]">Timesheets</span>
+                    <span className="text-sm font-semibold text-[#0F172A]">{safeDashboardData.timesheetsSubmitted}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-[#0F172A]">Leave Requests</span>
+                    <span className="text-sm font-semibold text-[#0F172A]">{safeDashboardData.leaveRequestsPending}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Link href="/manager/approvals" className="w-full">
+                    <Button
+                      variant="gradient"
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:opacity-90"
+                    >
+                      Review Approvals
+                    </Button>
+                  </Link>
+                  <Link href="/manager/tasks" className="w-full">
+                    <Button
+                      variant="outline"
+                      className="w-full border-[#2563EB]/20 text-[#2563EB] hover:bg-[#2563EB]/5"
+                    >
+                      View Tasks Report
+                    </Button>
+                  </Link>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -311,16 +523,15 @@ export default function ManagerDashboardPage() {
           </div>
 
           {updates.length === 0 ? (
-            <div className="text-center py-12 text-[#64748B]">
-              <p className="text-sm mb-2">No performance updates found</p>
-              <p className="text-xs">Add your first update to track team performance</p>
-            </div>
+            <NoPerformanceUpdatesEmptyState
+              onAddUpdate={() => setShowAddModal(true)}
+            />
           ) : (
             <div className="space-y-4">
               {updates.map((update) => (
                 <div
                   key={update.id || update._id}
-                  className="p-4 border border-slate-200 rounded-lg hover:shadow-md transition-all"
+                  className="p-4 border-2 border-slate-300 rounded-lg hover:shadow-lg transition-all bg-white"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -372,11 +583,11 @@ export default function ManagerDashboardPage() {
 
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200 bg-white">
-            <CardHeader className="flex items-center justify-between sticky top-0 bg-white border-b border-slate-200">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto border-2 border-slate-400 bg-white shadow-2xl">
+            <CardHeader className="flex items-center justify-between sticky top-0 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-slate-300">
               <CardTitle className="text-lg font-bold text-[#0F172A]">Add Performance Update</CardTitle>
               <Button variant="ghost" size="sm" onClick={() => setShowAddModal(false)}>
-                ✕
+                <X className="w-5 h-5" />
               </Button>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
@@ -500,6 +711,7 @@ export default function ManagerDashboardPage() {
           </Card>
         </div>
       )}
-    </div>
+      </main>
+    </DashboardErrorBoundary>
   );
 }

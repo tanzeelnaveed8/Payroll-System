@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
@@ -10,6 +10,7 @@ import Link from "next/link";
 import { taskService, type Task, type TaskStatus, type TaskPriority, type TaskFilters, type TaskSort } from "@/lib/services/taskService";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { toast } from "@/lib/hooks/useToast";
+import { usersApi } from "@/lib/api/users";
 
 export default function ManagerTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -20,6 +21,17 @@ export default function ManagerTasksPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const { user } = useAuth();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deptLeads, setDeptLeads] = useState<any[]>([]);
+  const [loadingDeptLeads, setLoadingDeptLeads] = useState(false);
+  const [createData, setCreateData] = useState({
+    employeeId: "",
+    title: "",
+    description: "",
+    priority: "medium" as TaskPriority,
+    dueDate: "",
+    estimatedHours: "",
+  });
 
   const pageSize = 10;
 
@@ -35,19 +47,22 @@ export default function ManagerTasksPage() {
     totalActualHours: 0,
   });
 
-  useEffect(() => {
-    if (user?.id) {
-      loadTasks();
+  const loadDeptLeads = useCallback(async () => {
+    setLoadingDeptLeads(true);
+    try {
+      // Manager can only assign tasks to Department Leads (hierarchical assignment)
+      const response = await usersApi.getUsers({ limit: 100, role: "dept_lead", status: "active" });
+      const deptLeadsList = Array.isArray(response.data) ? response.data : [];
+      setDeptLeads(deptLeadsList);
+    } catch (err: any) {
+      setDeptLeads([]);
+      console.error("Failed to load Department Leads:", err);
+    } finally {
+      setLoadingDeptLeads(false);
     }
-  }, [user]);
+  }, []);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadTasks();
-    }
-  }, [filters, sort, page]);
-
-  const loadTasks = async (retryCount = 0) => {
+  const loadTasks = useCallback(async (retryCount = 0) => {
     setLoading(true);
     setError(null);
     try {
@@ -103,6 +118,54 @@ export default function ManagerTasksPage() {
     } finally {
       setLoading(false);
     }
+  }, [filters, sort, page, pageSize]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadDeptLeads();
+    }
+  }, [user?.id, loadDeptLeads]);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadTasks();
+    }
+  }, [user?.id, loadTasks]);
+
+  const handleCreateTask = async () => {
+    if (!createData.employeeId || !createData.title || !createData.dueDate) {
+      toast.warning("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await taskService.createTask({
+        employeeId: createData.employeeId,
+        title: createData.title,
+        description: createData.description || undefined,
+        priority: createData.priority,
+        dueDate: createData.dueDate,
+        estimatedHours: createData.estimatedHours ? parseFloat(createData.estimatedHours) : undefined,
+      });
+      setShowCreateModal(false);
+      setCreateData({
+        employeeId: "",
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: "",
+        estimatedHours: "",
+      });
+      toast.success("Task created successfully and assigned to Department Lead!");
+      setPage(1);
+      await loadTasks();
+    } catch (error: any) {
+      const errorMessage = error?.message || error?.response?.data?.message || "Failed to create task. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusBadge = (status: TaskStatus) => {
@@ -139,11 +202,18 @@ export default function ManagerTasksPage() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#0F172A] mb-2">Team Tasks Report</h1>
           <p className="text-sm sm:text-base text-[#64748B]">Monitor and track your team&apos;s task progress</p>
         </div>
+        <Button
+          variant="gradient"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 text-white w-full sm:w-auto"
+          onClick={() => setShowCreateModal(true)}
+        >
+          Create Task
+        </Button>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border border-slate-200 bg-white">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs sm:text-sm text-[#64748B]">Total Tasks</p>
@@ -155,7 +225,7 @@ export default function ManagerTasksPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs sm:text-sm text-[#64748B]">In Progress</p>
@@ -167,7 +237,7 @@ export default function ManagerTasksPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs sm:text-sm text-[#64748B]">Completed</p>
@@ -179,7 +249,7 @@ export default function ManagerTasksPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs sm:text-sm text-[#64748B]">Overdue</p>
@@ -193,8 +263,8 @@ export default function ManagerTasksPage() {
       </div>
 
       {/* Progress Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="border border-slate-200 bg-white">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-[#0F172A]">Average Progress</CardTitle>
           </CardHeader>
@@ -211,7 +281,7 @@ export default function ManagerTasksPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-[#0F172A]">Estimated Hours</CardTitle>
           </CardHeader>
@@ -221,7 +291,7 @@ export default function ManagerTasksPage() {
           </CardContent>
         </Card>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="border-2 border-slate-300 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-sm font-semibold text-[#0F172A]">Actual Hours</CardTitle>
           </CardHeader>
@@ -233,8 +303,8 @@ export default function ManagerTasksPage() {
       </div>
 
       {/* Tasks Table */}
-      <Card className="border border-slate-200 bg-white">
-        <CardHeader>
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-200">
           <div className="flex flex-col gap-4">
             <CardTitle className="text-lg font-bold text-[#0F172A]">Team Tasks</CardTitle>
             <div className="flex flex-col sm:flex-row gap-2">
@@ -414,6 +484,141 @@ export default function ManagerTasksPage() {
           )}
         </CardContent>
       </Card>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-white rounded-xl border border-slate-200 shadow-xl">
+            <div className="flex items-center justify-between pb-4 px-6 pt-6 border-b border-slate-200 flex-shrink-0">
+              <h2 className="text-lg sm:text-xl font-bold text-[#0F172A]">Create Task</h2>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-[#64748B] hover:text-[#0F172A] transition-colors p-1 rounded-lg hover:bg-slate-100"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4 sm:space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[#0F172A]">
+                  Department Lead <span className="text-[#DC2626]">*</span>
+                </label>
+                <Select
+                  value={createData.employeeId}
+                  onChange={(e) => setCreateData({ ...createData, employeeId: e.target.value })}
+                  className="w-full"
+                  disabled={loadingDeptLeads}
+                >
+                  <option value="">
+                    {loadingDeptLeads ? "Loading Department Leads..." : "Select Department Lead"}
+                  </option>
+                  {!loadingDeptLeads && deptLeads.length === 0 ? (
+                    <option value="" disabled>No Department Leads available. Please register Department Leads first.</option>
+                  ) : (
+                    deptLeads.map((deptLead) => {
+                      const deptText = deptLead.department ? ` | ${deptLead.department}` : '';
+                      const positionText = deptLead.position ? ` | ${deptLead.position}` : '';
+                      return (
+                        <option key={deptLead.id} value={deptLead.id}>
+                          {deptLead.name} ({deptLead.email}){deptText}{positionText}
+                        </option>
+                      );
+                    })
+                  )}
+                </Select>
+                {!loadingDeptLeads && deptLeads.length === 0 && (
+                  <p className="text-xs font-semibold text-amber-700 mt-1">
+                    No active Department Leads found. Please register Department Leads in the user management section.
+                  </p>
+                )}
+                <p className="text-xs text-[#64748B] mt-1">
+                  Note: Tasks assigned to Department Leads will be delegated to relevant employees by the Department Lead.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[#0F172A]">
+                  Title <span className="text-[#DC2626]">*</span>
+                </label>
+                <Input
+                  type="text"
+                  value={createData.title}
+                  onChange={(e) => setCreateData({ ...createData, title: e.target.value })}
+                  placeholder="Task title"
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[#0F172A]">Description</label>
+                <textarea
+                  value={createData.description}
+                  onChange={(e) => setCreateData({ ...createData, description: e.target.value })}
+                  className="w-full min-h-[100px] sm:min-h-[120px] rounded-xl border-2 border-[#2563EB]/30 bg-white px-4 py-3 text-sm text-[#0F172A] placeholder:text-[#64748B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:border-[#2563EB] transition-all resize-y"
+                  placeholder="Task description"
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">
+                    Priority <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <Select
+                    value={createData.priority}
+                    onChange={(e) => setCreateData({ ...createData, priority: e.target.value as TaskPriority })}
+                    className="w-full"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0F172A]">
+                    Due Date <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    value={createData.dueDate}
+                    onChange={(e) => setCreateData({ ...createData, dueDate: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-[#0F172A]">Estimated Hours</label>
+                <Input
+                  type="number"
+                  value={createData.estimatedHours}
+                  onChange={(e) => setCreateData({ ...createData, estimatedHours: e.target.value })}
+                  placeholder="Hours"
+                  min="0"
+                  step="0.5"
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 px-6 py-4 border-t border-slate-200 flex-shrink-0 bg-white">
+              <Button
+                variant="gradient"
+                className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleCreateTask}
+                disabled={!createData.employeeId || !createData.title || !createData.dueDate || loading}
+              >
+                {loading ? "Creating..." : "Create Task"}
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 border-slate-200"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -69,3 +69,257 @@
     transform: rotateY(180deg);
   }
 }
+
+/* Fix select dropdown options to show full text */
+select option {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  padding: 8px 12px;
+}
+
+/* Remove red validation border for optional date inputs */
+input[type="date"]:invalid:not(:focus):not(:placeholder-shown) {
+  border-color: rgb(37 99 235 / 0.3);
+}
+
+input[type="date"]:invalid:focus {
+  border-color: #2563EB;
+}
+
+/* Ensure select elements show full text */
+select {
+  text-overflow: ellipsis;
+}
+
+select option {
+  white-space: pre-wrap;
+  overflow: visible;
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Accessibility: Screen reader only class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Accessibility: Focus visible improvements for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid #2563EB;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Accessibility: Skip link styling */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #2563EB;
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Accessibility: High contrast mode support */
+@media (prefers-contrast: high) {
+  * {
+    border-width: 2px !important;
+  }
+  
+  .card {
+    border-width: 2px !important;
+  }
+}
+
+/* Fluid Typography Utilities */
+:root {
+  --fluid-min-size: 16px;
+  --fluid-max-size: 24px;
+  --fluid-min-screen: 320px;
+  --fluid-max-screen: 1920px;
+}
+
+.fluid-typography {
+  font-size: clamp(var(--fluid-min-size), (var(--fluid-max-size) - var(--fluid-min-size)) * ((100vw - var(--fluid-min-screen)) / (var(--fluid-max-screen) - var(--fluid-min-screen))) + var(--fluid-min-size), var(--fluid-max-size));
+}
+
+.fluid-h1 {
+  font-size: clamp(2rem, (3rem - 2rem) * ((100vw - 768px) / (1920px - 768px)) + 2rem, 3rem);
+}
+
+.fluid-h2 {
+  font-size: clamp(1.5rem, (2rem - 1.5rem) * ((100vw - 768px) / (1920px - 768px)) + 1.5rem, 2rem);
+}
+
+.fluid-h3 {
+  font-size: clamp(1.25rem, (1.5rem - 1.25rem) * ((100vw - 768px) / (1920px - 768px)) + 1.25rem, 1.5rem);
+}
+
+.fluid-body {
+  font-size: clamp(1rem, (1.25rem - 1rem) * ((100vw - 768px) / (1920px - 768px)) + 1rem, 1.25rem);
+}
+
+.fluid-small {
+  font-size: clamp(0.875rem, (1rem - 0.875rem) * ((100vw - 768px) / (1920px - 768px)) + 0.875rem, 1rem);
+}
+
+.fluid-tiny {
+  font-size: clamp(0.75rem, (0.875rem - 0.75rem) * ((100vw - 768px) / (1920px - 768px)) + 0.75rem, 0.875rem);
+}
+
+/* Responsive Container Utilities */
+.container-responsive {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.container-fluid {
+  max-width: none;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Responsive Spacing Utilities */
+.spacing-responsive {
+  padding: 1rem;
+}
+
+.spacing-responsive-sm {
+  padding: 0.75rem;
+}
+
+.spacing-responsive-lg {
+  padding: 1.5rem;
+}
+
+.spacing-responsive-xl {
+  padding: 2rem;
+}
+
+/* Large Screen Optimizations */
+@media (min-width: 1920px) {
+  .container-responsive {
+    max-width: 1600px;
+  }
+
+  .spacing-responsive-xl {
+    padding: 2.5rem;
+  }
+}
+
+/* Tablet Breakpoints */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container-responsive {
+    max-width: 900px;
+  }
+
+  .spacing-responsive {
+    padding: 0.75rem;
+  }
+
+  .spacing-responsive-lg {
+    padding: 1.25rem;
+  }
+}
+
+/* Small Tablet Breakpoints */
+@media (min-width: 640px) and (max-width: 768px) {
+  .container-responsive {
+    max-width: 700px;
+  }
+
+  .spacing-responsive {
+    padding: 0.5rem;
+  }
+
+  .spacing-responsive-lg {
+    padding: 1rem;
+  }
+}
+
+/* Large Desktop Breakpoints */
+@media (min-width: 2560px) {
+  .container-responsive {
+    max-width: 2000px;
+  }
+
+  .spacing-responsive-xl {
+    padding: 3rem;
+  }
+}
+
+/* Ultra Wide Monitor Breakpoints */
+@media (min-width: 3840px) {
+  .container-responsive {
+    max-width: 3200px;
+  }
+
+  .spacing-responsive-xl {
+    padding: 4rem;
+  }
+}
+
+/* Mobile-First Breakpoints */
+@media (min-width: 320px) and (max-width: 640px) {
+  .container-responsive {
+    max-width: 600px;
+  }
+
+  .spacing-responsive {
+    padding: 0.5rem;
+  }
+
+  .spacing-responsive-lg {
+    padding: 0.75rem;
+  }
+}
+
+/* Accessibility: High contrast mode support */
+@media (prefers-contrast: high) {
+  .container-responsive {
+    border: 2px solid #000;
+  }
+
+  .spacing-responsive,
+  .spacing-responsive-sm,
+  .spacing-responsive-lg,
+  .spacing-responsive-xl {
+    border: 2px solid #000;
+  }
+}
+
+/* Accessibility: Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .container-responsive,
+  .spacing-responsive,
+  .spacing-responsive-sm,
+  .spacing-responsive-lg,
+  .spacing-responsive-xl {
+    transition: none;
+  }
+}

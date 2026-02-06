@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import { Building2, Plus, Search, Pencil, Trash2, X, Loader2, FolderOpen } from "lucide-react";
 import { departmentsApi, type Department } from "@/lib/api/departments";
 
 export default function AdminDepartmentsPage() {
@@ -32,11 +33,7 @@ export default function AdminDepartmentsPage() {
     status: "active" as "active" | "inactive",
   });
 
-  useEffect(() => {
-    loadDepartments();
-  }, [page, search, statusFilter]);
-
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -56,7 +53,11 @@ export default function AdminDepartmentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, search, statusFilter]);
+
+  useEffect(() => {
+    loadDepartments();
+  }, [loadDepartments]);
 
   const handleAdd = () => {
     setFormData({
@@ -140,11 +141,14 @@ export default function AdminDepartmentsPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-0">
+    <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2">Departments</h1>
-          <p className="text-sm sm:text-base text-[#64748B]">Manage organizational departments</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2 flex items-center gap-2">
+            <Building2 className="h-7 w-7 text-[#2563EB]" />
+            Department Management
+          </h1>
+          <p className="text-sm sm:text-base text-[#64748B]">Organize, configure, and oversee all company departments and their allocations</p>
         </div>
         <Button
           onClick={handleAdd}
@@ -154,7 +158,7 @@ export default function AdminDepartmentsPage() {
         </Button>
       </div>
 
-      <Card className="border border-slate-200 bg-white">
+      <Card className="border-2 border-slate-300 bg-white shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1">
@@ -199,7 +203,7 @@ export default function AdminDepartmentsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-slate-200">
+                    <tr className="border-b-2 border-slate-300 bg-gradient-to-r from-slate-50 to-blue-50">
                       <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Name</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Code</th>
                       <th className="text-left py-3 px-4 text-sm font-semibold text-[#0F172A]">Employees</th>
@@ -212,7 +216,7 @@ export default function AdminDepartmentsPage() {
                     {departments.map((dept) => (
                       <tr
                         key={dept.id}
-                        className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
+                        className="border-b border-slate-200 hover:bg-blue-50 transition-colors bg-white"
                       >
                         <td className="py-4 px-4">
                           <div>
@@ -244,10 +248,10 @@ export default function AdminDepartmentsPage() {
                         </td>
                         <td className="py-4 px-4">
                           <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border-2 ${
                               dept.status === "active"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
+                                ? "bg-green-100 text-green-800 border-green-300"
+                                : "bg-gray-100 text-gray-800 border-gray-300"
                             }`}
                           >
                             {dept.status}
@@ -256,16 +260,16 @@ export default function AdminDepartmentsPage() {
                         <td className="py-4 px-4">
                           <div className="flex justify-end gap-2">
                             <Button
-                              variant="outline"
+                              variant="default"
                               onClick={() => handleEdit(dept)}
-                              className="text-xs px-3 py-1"
+                              className="text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-semibold shadow-sm hover:shadow-md"
                             >
                               Edit
                             </Button>
                             <Button
                               variant="outline"
                               onClick={() => handleDelete(dept.id)}
-                              className="text-xs px-3 py-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                              className="text-xs sm:text-sm px-3 sm:px-4 py-1 sm:py-2 bg-[#DC2626] hover:bg-[#B91C1C] text-white border-transparent hover:border-transparent font-semibold shadow-sm hover:shadow-md"
                             >
                               Delete
                             </Button>
@@ -320,10 +324,31 @@ export default function AdminDepartmentsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <CardHeader className="border-b border-slate-200">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold text-[#0F172A]">
-                  {selectedDepartment ? "Edit Department" : "Add New Department"}
-                </CardTitle>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-xl font-bold text-[#0F172A]">
+                    {selectedDepartment ? "Edit Department" : "Add New Department"}
+                  </CardTitle>
+                  {selectedDepartment && (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                      <span className="text-[#64748B]">
+                        Current: <span className="font-semibold text-[#0F172A]">{selectedDepartment.name}</span>
+                        {selectedDepartment.code && (
+                          <span className="text-[#94A3B8]"> • {selectedDepartment.code}</span>
+                        )}
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                          selectedDepartment.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {selectedDepartment.status === "active" ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setIsAddModalOpen(false);
@@ -453,6 +478,7 @@ export default function AdminDepartmentsPage() {
                       setIsAddModalOpen(false);
                       setIsEditModalOpen(false);
                     }}
+                    className="px-4 sm:px-6 h-10 sm:h-11 border-2 border-slate-300 text-[#0F172A] bg-white hover:bg-slate-50 font-semibold"
                   >
                     Cancel
                   </Button>

@@ -280,7 +280,7 @@ export const createLeaveRequest = async (req, res, next) => {
     if (manager) {
       await Notification.create({
         userId: manager._id,
-        type: 'approval_required',
+        type: 'leave_submitted',
         title: 'Leave Request Submitted',
         message: `${employee.name} has submitted a ${leaveType} leave request for ${totalDays} day(s)`,
         relatedEntityType: 'leave',
@@ -296,13 +296,33 @@ export const createLeaveRequest = async (req, res, next) => {
     for (const admin of admins) {
       await Notification.create({
         userId: admin._id,
-        type: 'approval_required',
+        type: 'leave_submitted',
         title: 'Leave Request Submitted',
         message: `${employee.name} has submitted a ${leaveType} leave request for ${totalDays} day(s)`,
         relatedEntityType: 'leave',
         relatedEntityId: leaveRequest._id,
         priority: 'medium',
         actionUrl: `/admin/leave`,
+        actionLabel: 'Review Leave Request'
+      });
+    }
+    
+    // Notify department lead if employee has one
+    const deptLead = await User.findOne({ 
+      role: 'dept_lead', 
+      department: employee.department,
+      status: 'active' 
+    }).select('_id');
+    if (deptLead && deptLead._id.toString() !== manager?._id?.toString()) {
+      await Notification.create({
+        userId: deptLead._id,
+        type: 'leave_submitted',
+        title: 'Leave Request Submitted',
+        message: `${employee.name} has submitted a ${leaveType} leave request for ${totalDays} day(s)`,
+        relatedEntityType: 'leave',
+        relatedEntityId: leaveRequest._id,
+        priority: 'medium',
+        actionUrl: `/dept_lead/leave`,
         actionLabel: 'Review Leave Request'
       });
     }

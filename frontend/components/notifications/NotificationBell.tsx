@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { notificationService, type Notification } from "@/lib/services/notificationService";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import { Bell, Trash2, CheckCheck } from "lucide-react";
 
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -11,23 +12,16 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadUnreadCount();
-    if (isOpen) {
-      loadNotifications();
-    }
-  }, [isOpen]);
-
-  const loadUnreadCount = async () => {
+  const loadUnreadCount = useCallback(async () => {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
     } catch (error) {
       console.error('Failed to load unread count:', error);
     }
-  };
+  }, []);
 
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const result = await notificationService.getNotifications({ limit: 10 });
@@ -37,7 +31,29 @@ export default function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadUnreadCount();
+    if (isOpen) {
+      loadNotifications();
+    }
+  }, [isOpen, loadUnreadCount, loadNotifications]);
+
+  // Poll for new notifications every 30 seconds
+  useEffect(() => {
+    loadUnreadCount();
+    
+    const interval = setInterval(() => {
+      loadUnreadCount();
+      if (isOpen) {
+        loadNotifications();
+      }
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isOpen, loadUnreadCount, loadNotifications]);
+
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -106,9 +122,7 @@ export default function NotificationBell() {
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
-        <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
+        <Bell className="w-5 h-5 sm:w-6 sm:h-6 text-[#64748B]" />
         {unreadCount > 0 && (
           <span className="absolute top-0 right-0 h-4 w-4 sm:h-5 sm:w-5 bg-[#DC2626] text-white text-[10px] sm:text-xs font-bold rounded-full flex items-center justify-center transform translate-x-1 -translate-y-1 sm:translate-x-0.5 sm:-translate-y-0.5">
             {unreadCount > 9 ? '9+' : unreadCount}

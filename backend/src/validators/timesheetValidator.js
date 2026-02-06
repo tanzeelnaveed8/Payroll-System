@@ -312,8 +312,8 @@ export const validateGetTimesheets = [
     .withMessage('Department must be less than 100 characters'),
   query('role')
     .optional()
-    .isIn(['admin', 'manager', 'employee'])
-    .withMessage('Role must be one of: admin, manager, employee'),
+    .isIn(['admin', 'manager', 'employee', 'dept_lead'])
+    .withMessage('Role must be one of: admin, manager, employee, or dept_lead'),
 ];
 
 export const handleValidationErrors = (req, res, next) => {

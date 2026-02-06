@@ -16,7 +16,7 @@ export const validateCreateUser = [
     .custom(async (value) => {
       const user = await User.findOne({ email: value });
       if (user) {
-        throw new Error('An account with this email address already exists');
+        throw new Error('This email address is already registered. Please use a different email address.');
       }
     }),
   body('password')
@@ -35,8 +35,8 @@ export const validateCreateUser = [
   body('role')
     .notEmpty()
     .withMessage('Role is required')
-    .isIn(['admin', 'manager', 'employee'])
-    .withMessage('Role must be admin, manager, or employee'),
+    .isIn(['admin', 'manager', 'employee', 'dept_lead'])
+    .withMessage('Role must be admin, manager, employee, or dept_lead'),
   body('employeeId')
     .optional()
     .trim()
@@ -44,7 +44,7 @@ export const validateCreateUser = [
       if (value) {
         const user = await User.findOne({ employeeId: value });
         if (user) {
-          throw new Error('An account with this employee ID already exists');
+          throw new Error('This employee ID is already in use. Please use a different employee ID.');
         }
       }
     }),
@@ -133,8 +133,8 @@ export const validateUpdateUser = [
     .withMessage('Full name must be between 2 and 100 characters'),
   body('role')
     .optional()
-    .isIn(['admin', 'manager', 'employee'])
-    .withMessage('Role must be admin, manager, or employee'),
+    .isIn(['admin', 'manager', 'employee', 'dept_lead'])
+    .withMessage('Role must be admin, manager, employee, or dept_lead'),
   body('employeeId')
     .optional()
     .trim()
@@ -211,6 +211,38 @@ export const validateProfileUpdate = [
     .trim()
     .isLength({ max: 500 })
     .withMessage('Bio must be less than 500 characters'),
+  // Accept address as either a string or an object
+  body('address')
+    .optional()
+    .custom((value) => {
+      if (typeof value === 'string') {
+        // If it's a string, validate length
+        if (value.length > 500) {
+          throw new Error('Address must be less than 500 characters');
+        }
+        return true;
+      }
+      if (typeof value === 'object' && value !== null) {
+        // If it's an object, validate nested fields
+        if (value.street && value.street.length > 200) {
+          throw new Error('Street address must be less than 200 characters');
+        }
+        if (value.city && value.city.length > 100) {
+          throw new Error('City must be less than 100 characters');
+        }
+        if (value.state && value.state.length > 100) {
+          throw new Error('State must be less than 100 characters');
+        }
+        if (value.zipCode && value.zipCode.length > 20) {
+          throw new Error('Zip code must be less than 20 characters');
+        }
+        if (value.country && value.country.length > 100) {
+          throw new Error('Country must be less than 100 characters');
+        }
+        return true;
+      }
+      return true;
+    }),
   body('address.street')
     .optional()
     .trim()
@@ -287,8 +319,8 @@ export const validateUserQuery = [
     .withMessage('Search term must be less than 100 characters'),
   query('role')
     .optional()
-    .isIn(['admin', 'manager', 'employee'])
-    .withMessage('Role filter must be admin, manager, or employee'),
+    .isIn(['admin', 'manager', 'employee', 'dept_lead'])
+    .withMessage('Role filter must be admin, manager, employee, or dept_lead'),
   query('status')
     .optional()
     .isIn(['active', 'inactive', 'on-leave', 'terminated'])
@@ -325,6 +357,12 @@ export const handleValidationErrors = (req, res, next) => {
       message: err.msg,
     }));
     
+    // For single error, return it directly without "Please correct the following" prefix
+    if (errorMessages.length === 1) {
+      return next(new InvalidInputError(errorMessages[0].message, errorMessages));
+    }
+    
+    // For multiple errors, format them nicely
     const fieldMessages = errorMessages.map(e => {
       if (!e.field) {
         return e.message;

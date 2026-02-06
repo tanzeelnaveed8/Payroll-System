@@ -28,6 +28,7 @@ export interface EmployeeDashboardData {
     status: string;
     payPeriodStart: string;
     payPeriodEnd: string;
+    pdfUrl?: string;
   } | null;
   leaveOverview: {
     balance: {
